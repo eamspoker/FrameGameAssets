@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SpriteAtlas
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 1
+      compressionQuality: 50
+      maxTextureSize: 2048
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings: []
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 1
+      enableTightPacking: 1
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: -583900210, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+    - {fileID: -1281825912, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+    - {fileID: 1989780423, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+    - {fileID: -365306236, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+    - {fileID: -1267866523, guid: 163e361b5a731466fb84841313287423, type: 3}
+    - {fileID: 1723680707, guid: 163e361b5a731466fb84841313287423, type: 3}
+    - {fileID: 352636878, guid: 163e361b5a731466fb84841313287423, type: 3}
+    - {fileID: -1972874119, guid: a15054e2fb3a742f29a0360245669605, type: 3}
+    - {fileID: -405063756, guid: a15054e2fb3a742f29a0360245669605, type: 3}
+    - {fileID: -1234545977, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+    - {fileID: -2142930001, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+    - {fileID: -1931880181, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+    - {fileID: -1371460642, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites:
+  - {fileID: 1989780423, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+  - {fileID: -365306236, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+  - {fileID: -583900210, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+  - {fileID: -1281825912, guid: 1c14d0915bfec405e85c61620cc555e1, type: 3}
+  - {fileID: -405063756, guid: a15054e2fb3a742f29a0360245669605, type: 3}
+  - {fileID: -1972874119, guid: a15054e2fb3a742f29a0360245669605, type: 3}
+  - {fileID: -1371460642, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+  - {fileID: -1234545977, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+  - {fileID: -1931880181, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+  - {fileID: -2142930001, guid: 0b1e2f798a9ca49c5824ee0cf2866b84, type: 3}
+  - {fileID: -1267866523, guid: 163e361b5a731466fb84841313287423, type: 3}
+  - {fileID: 352636878, guid: 163e361b5a731466fb84841313287423, type: 3}
+  - {fileID: 1723680707, guid: 163e361b5a731466fb84841313287423, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - yorkie animation_18
+  - yorkie animation_19
+  - yorkie animation_16
+  - yorkie animation_17
+  - side counter
+  - front counter
+  - chairright
+  - chairback
+  - chairleft
+  - chairfront
+  - cafe1_floor
+  - cafe1_wal
+  - cafe1_wall
+  m_RenderDataMap: {}
+  m_Tag: SpriteAtlas
+  m_IsVariant: 0
