@@ -119,7 +119,7 @@ TextureImporter:
       name: paper
       rect:
         serializedVersion: 2
-        x: 561
+        x: 559
         y: 203
         width: 500
         height: 400
@@ -203,12 +203,12 @@ TextureImporter:
       name: Paper2
       rect:
         serializedVersion: 2
-        x: 22
+        x: 23
         y: 203
         width: 500
         height: 400
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -216,6 +216,48 @@ TextureImporter:
       bones: []
       spriteID: fb6652a880503422ab79e80df6284a19
       internalID: 450490606
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: corner1
+      rect:
+        serializedVersion: 2
+        x: 366
+        y: 804
+        width: 136
+        height: 106
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 75593f9e560ec4935855de6ee0893913
+      internalID: 603391897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: rod1
+      rect:
+        serializedVersion: 2
+        x: 685
+        y: 904
+        width: 126
+        height: 6
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c11237fc949d144d7b79e6c34f65f23d
+      internalID: -733659606
       vertices: []
       indices: 
       edges: []
@@ -235,6 +277,8 @@ TextureImporter:
       All_Frameworks_0: 1647306351
       corner: -1826790749
       Paper2: 450490606
+      rod1: -733659606
+      corner1: 603391897
       paper: -2084367009
   spritePackingTag: 
   pSDRemoveMatte: 0

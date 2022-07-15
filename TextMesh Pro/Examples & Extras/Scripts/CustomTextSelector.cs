@@ -17,10 +17,11 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
         private TextMeshProUGUI m_TextPopup_TMPComponent;
         private const string k_LinkText = "You have selected link <#ffff00>";
         private const string k_WordText = "Word Index: <#ffff00>";
-        private (int, int) oldIndices = (-1, -1);
         private (int, int) selectedIndices = (-1, -1);
 
         public TMP_Text Result;
+        public int startIndex = -1;
+        public int endIndex = -1;
 
 
         private TextMeshProUGUI m_TextMeshPro;
@@ -84,7 +85,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
         }
 
 
-        void LateUpdate()
+        public void CheckAndSelect()
         {
             int wordIndex = TMP_TextUtilities.FindIntersectingWord(m_TextMeshPro, Input.mousePosition, m_Camera);
             int start = selectedIndices.Item1;
@@ -95,7 +96,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             {
                 ClearText();
             } else if(isHoveringObject
-                && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
+                && (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) {
                 WordSelect();
             } else if(wordIndex != -1 && (wordIndex == start || wordIndex == end) && (Input.GetMouseButtonDown(1)))
             {
@@ -167,6 +168,31 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                     m_selectedWord = wordIndex;
                     lastdeSelected = -1;
 
+                    // change color of text
+                    string[] byWord = (m_TextMeshPro.text).Split(" ");
+                    TMP_WordInfo wInfo = m_TextMeshPro.textInfo.wordInfo[wordIndex];
+                    for (int j = 0; j < wInfo.characterCount; j++)
+                    {
+                        int characterIndex = wInfo.firstCharacterIndex + j;
+                        // Get the index of the material / sub text object used by this character.
+                        int meshIndex = m_TextMeshPro.textInfo.characterInfo[characterIndex].materialReferenceIndex;
+
+                        int vertexIndex = m_TextMeshPro.textInfo.characterInfo[characterIndex].vertexIndex;
+
+                        // Get a reference to the vertex color
+                        Color32[] vertexColors = m_TextMeshPro.textInfo.meshInfo[meshIndex].colors32;
+
+                        Color32 c = vertexColors[vertexIndex + 0].Tint(0.25f);
+
+                        vertexColors[vertexIndex + 0] = c;
+                        vertexColors[vertexIndex + 1] = c;
+                        vertexColors[vertexIndex + 2] = c;
+                        vertexColors[vertexIndex + 3] = c;
+                    }
+
+                    // Update Geometry
+                    m_TextMeshPro.UpdateVertexData(TMP_VertexDataUpdateFlags.All);
+
                     // Add to our range of selected indices, unless outside of sentence
                     if(start == -1)
                     {
@@ -192,36 +218,23 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             int end = selectedIndices.Item2;
             string updated = "";
             string[] byWord = (m_TextMeshPro.text).Split(" ");
+            TMP_WordInfo[] wInfo = m_TextMeshPro.textInfo.wordInfo;
+            startIndex = 0;
             if(start != -1){
                 for(int i = start; i <= end; i++)
                 {
+                    updated += " ";
                     // update result window
-                    updated += " " + byWord[i];
-
-                    // change color of text
-                    TMP_WordInfo wInfo = m_TextMeshPro.textInfo.wordInfo[i];
-                    for (int j = 0; j < byWord[i].Length; j++)
+                    for(int j = 0; j < wInfo[i].characterCount; j++)
                     {
-                        int characterIndex = wInfo.firstCharacterIndex + j;
-                        // Get the index of the material / sub text object used by this character.
-                        int meshIndex = m_TextMeshPro.textInfo.characterInfo[characterIndex].materialReferenceIndex;
-
-                        int vertexIndex = m_TextMeshPro.textInfo.characterInfo[characterIndex].vertexIndex;
-
-                        // Get a reference to the vertex color
-                        Color32[] vertexColors = m_TextMeshPro.textInfo.meshInfo[meshIndex].colors32;
-
-                        Color32 c = vertexColors[vertexIndex + 0].Tint(0.75f);
-
-                        vertexColors[vertexIndex + 0] = c;
-                        vertexColors[vertexIndex + 1] = c;
-                        vertexColors[vertexIndex + 2] = c;
-                        vertexColors[vertexIndex + 3] = c;
+                        updated += (m_TextMeshPro.text)[wInfo[i].firstCharacterIndex + j];
                     }
-
-                    // Update Geometry
-                    m_TextMeshPro.UpdateVertexData(TMP_VertexDataUpdateFlags.All);
                 }
+
+                startIndex = wInfo[start].firstCharacterIndex;
+                endIndex = wInfo[end].lastCharacterIndex + 1;
+                updated = updated.Substring(1);
+                    
             } else {
                 updated = "Not in sentence";
             }
@@ -274,6 +287,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                 ClearTextH(i);
             }
             selectedIndices = (-1, -1);
+            startIndex = -1;
             Result.text = "Not in sentence";
         }
 

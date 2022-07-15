@@ -12,9 +12,11 @@ public class MenuScript : MonoBehaviourPunCallbacks
 
     [SerializeField] private string VersionName = "1";
     [SerializeField] private GameObject StartButton;
+    static string username;
+    static string id;
 
     // For testing without Facebook authentication
-    private bool IsMultTesting = true;
+    private bool IsMultTesting = false;
     [SerializeField] private TMP_InputField TestUsername;
     [SerializeField] private GameObject TestUsernameG;
     [SerializeField] private GameObject Connecting;
@@ -40,16 +42,17 @@ public class MenuScript : MonoBehaviourPunCallbacks
                 FB.ActivateApp();
                 FacebookLogin();
             }
-        } else {
-            PhotonNetwork.ConnectUsingSettings();
-            PhotonNetwork.GameVersion = VersionName;
         }
+        // } else {
+        //     PhotonNetwork.ConnectUsingSettings();
+        //     PhotonNetwork.GameVersion = VersionName;
+        // }
 
     }
 
     void Start()
     {
-    
+        StoredInfo loadedData = DataSaver.loadData<StoredInfo>("StoredData");
     }
 
     
@@ -62,11 +65,11 @@ public class MenuScript : MonoBehaviourPunCallbacks
     public void ConnectSRL() 
     {
         
-        if(IsMultTesting)
-        {
-          PhotonNetwork.NickName = TestUsername.text;  
-        }
-        PhotonNetwork.JoinRandomRoom();
+        // if(IsMultTesting)
+        // {
+        //   PhotonNetwork.NickName = TestUsername.text;  
+        // }
+        // PhotonNetwork.JoinRandomRoom();
     }
 
 
@@ -151,14 +154,15 @@ public class MenuScript : MonoBehaviourPunCallbacks
     private void OnFacebookLoggedIn()
     {
         // AccessToken class will have session details
-        string aToken = AccessToken.CurrentAccessToken.TokenString;
+        // string aToken = AccessToken.CurrentAccessToken.TokenString;
         string facebookId = AccessToken.CurrentAccessToken.UserId;
-        PhotonNetwork.AuthValues = new AuthenticationValues();
-        PhotonNetwork.AuthValues.AuthType = CustomAuthenticationType.FacebookGaming;
-        PhotonNetwork.AuthValues.UserId = facebookId; // alternatively set by server
-        PhotonNetwork.AuthValues.AddAuthParameter("token", aToken);
-        PhotonNetwork.ConnectUsingSettings();
-        PhotonNetwork.GameVersion = VersionName;
+        id = facebookId;
+        // PhotonNetwork.AuthValues = new AuthenticationValues();
+        // PhotonNetwork.AuthValues.AuthType = CustomAuthenticationType.FacebookGaming;
+        // PhotonNetwork.AuthValues.UserId = facebookId; // alternatively set by server
+        // PhotonNetwork.AuthValues.AddAuthParameter("token", aToken);
+        // PhotonNetwork.ConnectUsingSettings();
+        // PhotonNetwork.GameVersion = VersionName;
     }
 
     private void NameCallBack(IResult result)
@@ -166,7 +170,7 @@ public class MenuScript : MonoBehaviourPunCallbacks
        if (result.Error == null)
         {
             string name = "" + result.ResultDictionary["name"];
-            PhotonNetwork.NickName = name;
+            username = name;
         }
         else
         {
@@ -176,16 +180,16 @@ public class MenuScript : MonoBehaviourPunCallbacks
 
     // Callbacks for joining a random room
 
-    public override void OnJoinRandomFailed(short returnCode, string message)
-    {
-        Debug.Log("PUN Basics Tutorial/Launcher:OnJoinRandomFailed() was called by PUN. No random room available, so we create one.\nCalling: PhotonNetwork.CreateRoom");
-        PhotonNetwork.CreateRoom(null, new RoomOptions() {MaxPlayers = 2}, null);
-    }
+    // public override void OnJoinRandomFailed(short returnCode, string message)
+    // {
+    //     Debug.Log("PUN Basics Tutorial/Launcher:OnJoinRandomFailed() was called by PUN. No random room available, so we create one.\nCalling: PhotonNetwork.CreateRoom");
+    //     PhotonNetwork.CreateRoom(null, new RoomOptions() {MaxPlayers = 2}, null);
+    // }
 
-    public override void OnJoinedRoom()
-    {
-        PhotonNetwork.LoadLevel("SRLGame");
-    }
+    // public override void OnJoinedRoom()
+    // {
+    //     PhotonNetwork.LoadLevel("SRLGame");
+    // }
 
 
 

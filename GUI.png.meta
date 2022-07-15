@@ -271,7 +271,7 @@ TextureImporter:
         width: 5
         height: 6
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -279,6 +279,48 @@ TextureImporter:
       bones: []
       spriteID: 072cded6289a34ce195061d7043923b8
       internalID: -211483489
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: home
+      rect:
+        serializedVersion: 2
+        x: 129
+        y: 65
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 03dcf51d0ef8f48e49ca159dd3dd70e5
+      internalID: -374138935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: bar1
+      rect:
+        serializedVersion: 2
+        x: 135
+        y: 293
+        width: 45
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 411bddcad11b74dcda6b52439fdeb133
+      internalID: 736447409
       vertices: []
       indices: 
       edges: []
@@ -300,6 +342,8 @@ TextureImporter:
       qmark: 22933928
       bar: -270166408
       info: 943762553
+      home: -374138935
+      bar1: 736447409
       writing: 1841800776
       right: -211483489
   spritePackingTag: 
