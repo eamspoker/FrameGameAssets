@@ -86,7 +86,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
 
 
         public void CheckAndSelect()
-        {
+        {            
             int wordIndex = TMP_TextUtilities.FindIntersectingWord(m_TextMeshPro, Input.mousePosition, m_Camera);
             int start = selectedIndices.Item1;
             int end = selectedIndices.Item2;
@@ -95,8 +95,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                 (wordIndex == -1 && Input.GetMouseButtonDown(1)))
             {
                 ClearText();
-            } else if(isHoveringObject
-                && (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) {
+            } else if((Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) {
                 WordSelect();
             } else if(wordIndex != -1 && (wordIndex == start || wordIndex == end) && (Input.GetMouseButtonDown(1)))
             {
@@ -143,8 +142,6 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
 
         void WordSelect()
         {
-            if (isHoveringObject)
-            {
                 #region Word Selection Handling
                 //Check if Mouse intersects any words and if so assign a random color to that word.
                 int wordIndex = TMP_TextUtilities.FindIntersectingWord(m_TextMeshPro, Input.mousePosition, m_Camera);
@@ -158,6 +155,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                     || end == wordIndex-1);
 
                 bool isInRange = (start <= wordIndex) && (wordIndex <= end);
+
                 // Word Selection Handling
                 if (wordIndex != -1
                     && wordIndex != lastdeSelected
@@ -206,7 +204,6 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
 
 
                 }
-            }
             
             #endregion
         }
@@ -236,6 +233,8 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                 updated = updated.Substring(1);
                     
             } else {
+                startIndex = -1;
+                endIndex = -1;
                 updated = "Not in sentence";
             }
 

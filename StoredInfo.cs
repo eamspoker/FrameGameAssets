@@ -3,12 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
-public class StoredInfo
+public class PlayerInfo
 {
     // id, (username, coins)
-    public Dictionary<string, (string, int)> players;
-
-    // text, frame id, list of: (author id, FE id, (start index, length), isEditor)
-    public Dictionary<(string, int), (string, string, (int, int), bool)[]> annotatedSentences;
+    public string id;
+    public string username;
+    public int coins;
 
 }
+
+[Serializable]
+public class AnnotationInfo
+{
+    public string author_id;
+    public string fe_id;
+    public int startIndex;
+    public int length;
+    public bool isEditor;
+    public string text;
+}
+

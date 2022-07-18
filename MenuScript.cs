@@ -1,19 +1,24 @@
+using System;
+using System.IO;
+using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Realtime;
-using Photon.Pun;
+// using Photon.Realtime;
+// using Photon.Pun;
 using Facebook.Unity;
 using TMPro;
+using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 
 namespace ICSI.FrameNet.FrameGame {
-public class MenuScript : MonoBehaviourPunCallbacks
+public class MenuScript : MonoBehaviour // PunCallbacks
 {
 
     [SerializeField] private string VersionName = "1";
     [SerializeField] private GameObject StartButton;
-    static string username;
-    static string id;
+    private string username;
+    private string id;
 
     // For testing without Facebook authentication
     private bool IsMultTesting = false;
@@ -52,8 +57,71 @@ public class MenuScript : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        StoredInfo loadedData = DataSaver.loadData<StoredInfo>("StoredData");
     }
+
+    IEnumerator GetRequest(string uri)
+    {
+        string json = "";
+        using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
+        {
+            yield return webRequest.SendWebRequest();
+            if(webRequest.result == UnityWebRequest.Result.ConnectionError)
+            {
+                Debug.Log("Network Error: " + webRequest.error);
+            } else {
+                //Convert to json string
+                 string jsonData = Encoding.ASCII.GetString(webRequest.downloadHandler.data);
+                    //Convert to Object
+                    object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
+                    PlayerInfo inf = (PlayerInfo)Convert.ChangeType(resultValue, typeof(PlayerInfo));
+                    if(inf.id == "")
+                    {
+                        inf.id = id;
+                        inf.username = username;
+                        inf.coins = 0;
+                    } else {
+                        inf.username = username;
+                    }
+
+                // save ID for next scene
+                PlayerPrefs.SetString("player_id", id);
+
+                // Send back
+                json = JsonUtility.ToJson(inf);
+                webRequest.downloadHandler.Dispose();
+            }
+        }
+
+        StartCoroutine(PostRequest("http://127.0.0.1:5000/players/update", json));
+         
+    }
+
+    IEnumerator PostRequest(string url, string json)
+    {
+        
+        using (UnityWebRequest uwr = new UnityWebRequest(url, "POST"))
+        {
+            byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(json);
+            uwr.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
+            uwr.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+            uwr.SetRequestHeader("Content-Type", "application/json");
+
+            //Send the request then wait here until it returns
+            yield return uwr.SendWebRequest();
+
+            if (uwr.result == UnityWebRequest.Result.ConnectionError)
+            {
+                Debug.Log("Error While Sending: " + uwr.error);
+            }
+            else
+            {
+                Debug.Log("Received: " + uwr.downloadHandler.text);
+                // Enable start button
+                Connecting.SetActive(false);
+                StartButton.SetActive(true);
+            }
+        }
+        }
 
     
 
@@ -70,31 +138,33 @@ public class MenuScript : MonoBehaviourPunCallbacks
         //   PhotonNetwork.NickName = TestUsername.text;  
         // }
         // PhotonNetwork.JoinRandomRoom();
+
+        SceneManager.LoadScene("SRLGame");
     }
 
 
     // Callbacks: these are called after a certain event
 
-    public override void OnConnectedToMaster()
-    {
-        if(!IsMultTesting)
-        {
-            FB.API("me?fields=name", HttpMethod.GET, NameCallBack);
-        } else {
-            TestUsernameG.SetActive(true);
-        }
+    // public override void OnConnectedToMaster()
+    // {
+    //     if(!IsMultTesting)
+    //     {
+    //         FB.API("me?fields=name", HttpMethod.GET, NameCallBack);
+    //     } else {
+    //         TestUsernameG.SetActive(true);
+    //     }
         
-        PhotonNetwork.JoinLobby(TypedLobby.Default);
-        Connecting.SetActive(false);
-        StartButton.SetActive(true);
-        Debug.Log("PUN Basics Tutorial/Launcher: OnConnectedToMaster() was called by PUN");
-    }
+    //     PhotonNetwork.JoinLobby(TypedLobby.Default);
+    //     Connecting.SetActive(false);
+    //     StartButton.SetActive(true);
+    //     Debug.Log("PUN Basics Tutorial/Launcher: OnConnectedToMaster() was called by PUN");
+    // }
 
 
-    public override void OnDisconnected(DisconnectCause cause)
-    {
-        Debug.LogWarningFormat("PUN Basics Tutorial/Launcher: OnDisconnected() was called by PUN with reason {0}", cause);
-    }
+    // public override void OnDisconnected(DisconnectCause cause)
+    // {
+    //     Debug.LogWarningFormat("PUN Basics Tutorial/Launcher: OnDisconnected() was called by PUN with reason {0}", cause);
+    // }
 
     // Callbacks and helpers for Facebook login
 
@@ -121,7 +191,6 @@ public class MenuScript : MonoBehaviourPunCallbacks
             Time.timeScale = 1;
         }
     }
-
     private void FacebookLogin()
     {
         if (FB.IsLoggedIn)
@@ -147,16 +216,19 @@ public class MenuScript : MonoBehaviourPunCallbacks
         }
     }
 
-    public override void OnCustomAuthenticationFailed(string debugMessage)
-    {
-        Debug.LogErrorFormat("Error authenticating to Photon using Facebook: {0}", debugMessage);
-    }
+    
+
+    // public override void OnCustomAuthenticationFailed(string debugMessage)
+    // {
+    //     Debug.LogErrorFormat("Error authenticating to Photon using Facebook: {0}", debugMessage);
+    // }
     private void OnFacebookLoggedIn()
     {
         // AccessToken class will have session details
         // string aToken = AccessToken.CurrentAccessToken.TokenString;
         string facebookId = AccessToken.CurrentAccessToken.UserId;
         id = facebookId;
+        FB.API("me?fields=name", HttpMethod.GET, NameCallBack);
         // PhotonNetwork.AuthValues = new AuthenticationValues();
         // PhotonNetwork.AuthValues.AuthType = CustomAuthenticationType.FacebookGaming;
         // PhotonNetwork.AuthValues.UserId = facebookId; // alternatively set by server
@@ -176,6 +248,8 @@ public class MenuScript : MonoBehaviourPunCallbacks
         {
             Debug.Log(result.Error);
         }
+
+        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/"+id));
     }
 
     // Callbacks for joining a random room
