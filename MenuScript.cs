@@ -228,6 +228,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
         // string aToken = AccessToken.CurrentAccessToken.TokenString;
         string facebookId = AccessToken.CurrentAccessToken.UserId;
         id = facebookId;
+        Debug.Log(id);
         FB.API("me?fields=name", HttpMethod.GET, NameCallBack);
         // PhotonNetwork.AuthValues = new AuthenticationValues();
         // PhotonNetwork.AuthValues.AuthType = CustomAuthenticationType.FacebookGaming;
@@ -249,7 +250,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             Debug.Log(result.Error);
         }
 
-        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/"+id));
+        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/get/"+id));
     }
 
     // Callbacks for joining a random room

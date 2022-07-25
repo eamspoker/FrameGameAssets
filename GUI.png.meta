@@ -313,7 +313,7 @@ TextureImporter:
         width: 45
         height: 7
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -321,6 +321,69 @@ TextureImporter:
       bones: []
       spriteID: 411bddcad11b74dcda6b52439fdeb133
       internalID: 736447409
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: plainbutton
+      rect:
+        serializedVersion: 2
+        x: 145
+        y: 193
+        width: 46
+        height: 13
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6dad51114960d4ccba880ae3b9b00e87
+      internalID: 564227150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: square
+      rect:
+        serializedVersion: 2
+        x: 113
+        y: 177
+        width: 30
+        height: 14
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9f1af10126bd0413797229e21494c8dc
+      internalID: -1636138147
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: check
+      rect:
+        serializedVersion: 2
+        x: 67
+        y: 226
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f19986f9aab604eee852b71bc2616658
+      internalID: -268327741
       vertices: []
       indices: 
       edges: []
@@ -337,14 +400,17 @@ TextureImporter:
     secondaryTextures: []
     nameFileIdTable:
       arrow: -475964945
+      square: -1636138147
       GUI_0: -1476389889
       lockbutton: -778667979
       qmark: 22933928
+      check: -268327741
       bar: -270166408
       info: 943762553
       home: -374138935
       bar1: 736447409
       writing: 1841800776
+      plainbutton: 564227150
       right: -211483489
   spritePackingTag: 
   pSDRemoveMatte: 0

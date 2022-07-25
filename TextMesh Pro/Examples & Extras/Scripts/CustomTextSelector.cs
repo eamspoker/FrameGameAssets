@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
 using System.Collections.Generic;
@@ -18,10 +19,18 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
         private const string k_LinkText = "You have selected link <#ffff00>";
         private const string k_WordText = "Word Index: <#ffff00>";
         private (int, int) selectedIndices = (-1, -1);
+        private Dictionary<string, Vector2> offsets = new Dictionary<string, Vector2>();
+
+        private Dictionary<string, Vector3> origins = new Dictionary<string, Vector3>();
+        private Dictionary<string, Color> colors = new Dictionary<string, Color>();
+
 
         public TMP_Text Result;
         public int startIndex = -1;
         public int endIndex = -1;
+
+        public GameObject parentGameObject;
+        public GameObject positionGameObject;
 
 
         private TextMeshProUGUI m_TextMeshPro;
@@ -39,12 +48,20 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
 
         private int lastdeSelected = -1;
         private string lastString = "Not in sentence";
+        private string story = "";
+
+        private Canvas canvas;
+        private Dictionary<string, (int, int)> FrameIndices = new Dictionary<string, (int,int)>();
+
+        Vector2 last_offset;
+
+        float top;
 
         void Awake()
         {
             m_TextMeshPro = gameObject.GetComponent<TextMeshProUGUI>();
-            
-
+            last_offset = gameObject.GetComponent<RectTransform>().offsetMin;
+            top = (gameObject.GetComponent<RectTransform>().rect.height/2);
 
             m_Canvas = gameObject.GetComponentInParent<Canvas>();
 
@@ -66,6 +83,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
         {
             // Subscribe to event fired when text object has been regenerated.
             TMPro_EventManager.TEXT_CHANGED_EVENT.Add(ON_TEXT_CHANGED);
+            canvas = parentGameObject.GetComponent<Canvas>();
         }
 
         void OnDisable()
@@ -73,6 +91,8 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             // UnSubscribe to event fired when text object has been regenerated.
             TMPro_EventManager.TEXT_CHANGED_EVENT.Remove(ON_TEXT_CHANGED);
         }
+
+
 
 
         void ON_TEXT_CHANGED(Object obj)
@@ -84,9 +104,183 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             }
         }
 
+        public void SetString(string s)
+        {
+            story = s;
+        }
 
+
+        public void addHighlight(string f_name, string fe_name, Color color, int start_char, int end_char)
+        {
+            
+            int start_line = m_TextMeshPro.textInfo.characterInfo[start_char].lineNumber;
+            int end_line = m_TextMeshPro.textInfo.characterInfo[end_char].lineNumber;
+            
+            if(start_line == end_line)
+            {
+                createRectangle(start_char, end_char, f_name + "_"+ fe_name, color);
+
+            } else
+            {
+                for(int i = start_line; i <= end_line; i++)
+                {
+                    int startOfLineChar = m_TextMeshPro.textInfo.lineInfo[i].firstVisibleCharacterIndex;
+                    int endOfLineChar = m_TextMeshPro.textInfo.lineInfo[i].lastVisibleCharacterIndex;
+                    if(i == start_line)
+                    {
+                        createRectangle(start_char, endOfLineChar, f_name + "_"+ fe_name+(i-start_line), color);
+                    } else if(i == end_line)
+                    {
+                        createRectangle(startOfLineChar, end_char, f_name + "_"+ fe_name+(i-start_line), color);
+                    } else {
+                        createRectangle(startOfLineChar, endOfLineChar, f_name + "_"+ fe_name+(i-start_line), color);
+                    }
+                }
+            }
+        }
+
+
+        public void createRectangle(int first, int last, string gname, Color c)
+        {
+            GameObject g = GameObject.Find(gname);
+            if(g != null)
+            {
+                Destroy(g);
+            }
+            Vector3 topLeft = m_TextMeshPro.textInfo.characterInfo[first].topLeft;
+            Vector3 bottomRight = m_TextMeshPro.textInfo.characterInfo[last].bottomRight;
+            float rWidth = bottomRight.x - topLeft.x;
+            float rHeight = topLeft.y - bottomRight.y;
+            Vector3 origin = Vector3.zero;
+            origin.x = topLeft.x + (rWidth/2);
+            origin.y = bottomRight.y + (rHeight/2);
+            Vector2 offset = gameObject.GetComponent<RectTransform>().offsetMin;
+            origin = origin + new Vector3(offset.x, offset.y, 0);
+            
+            Vector3 newScale = new Vector3(rWidth/100, rHeight/100, 0);
+            Canvas canvas = positionGameObject.GetComponent<Canvas>();
+            offsets[gname] = gameObject.GetComponent<RectTransform>().offsetMin;
+
+            // create GameObject
+            GameObject imageGameObject = new GameObject(gname);
+            Image image = imageGameObject.AddComponent<Image>();
+
+            //check if rectangle is within bounds
+            colors[gname] = c;
+            if(origin.y <= top && origin.y >= (top*-1.0F))
+            {
+                c.a = 0.25F;
+            } else {
+                c.a = 0.0F;
+            }
+            image.color = c;
+            RectTransform r = imageGameObject.GetComponent<RectTransform>();
+            FrameIndices[gname] = (first, last);
+
+            // resize
+            r.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rHeight);
+            r.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rWidth);
+
+            // set position and store world position
+            imageGameObject.transform.position = origin;
+            imageGameObject.transform.SetParent(positionGameObject.transform, false);
+            origins[gname] = imageGameObject.transform.position;
+        }
+
+        public void updateRectangle(string gname)
+        {
+            int first = FrameIndices[gname].Item1;
+            int last = FrameIndices[gname].Item2;
+            GameObject g = GameObject.Find(gname);
+            if(g != null)
+            {
+                Destroy(g);
+            }
+            // find origin
+            Vector3 topLeft = m_TextMeshPro.textInfo.characterInfo[first].topLeft;
+            Vector3 bottomRight = m_TextMeshPro.textInfo.characterInfo[last].bottomRight;
+            float rWidth = bottomRight.x - topLeft.x;
+            float rHeight = topLeft.y - bottomRight.y;
+            Vector3 origin = Vector3.zero;
+            origin.x = topLeft.x + (rWidth/2);
+            origin.y = bottomRight.y + (rHeight/2);
+
+            Vector2 offset = gameObject.GetComponent<RectTransform>().offsetMin;
+            origin = origin + new Vector3(offset.x, offset.y, 0);
+
+            // scale
+            Vector3 newScale = new Vector3(rWidth/100, rHeight/100, 0);
+            Canvas canvas = positionGameObject.GetComponent<Canvas>();
+            offsets[gname] = gameObject.GetComponent<RectTransform>().offsetMin;
+            // create GameObject
+            GameObject imageGameObject = new GameObject(gname);
+            Image image = imageGameObject.AddComponent<Image>();
+            Color c = colors[gname];
+            if(origin.y <= top && origin.y >= (top*-1.0F))
+            {
+                c.a = 0.25F;
+            } else {
+                c.a = 0.0F;
+            }
+            image.color = c;
+            RectTransform r = imageGameObject.GetComponent<RectTransform>();
+
+            // resize
+            r.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, rHeight);
+            r.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, rWidth);
+
+            // set position and store world position
+            imageGameObject.transform.position = origin;
+            imageGameObject.transform.SetParent(positionGameObject.transform, false);
+            origins[gname] = imageGameObject.transform.position;
+        }
+
+        public void UpdateHighlights()
+        {
+            Vector2 offset = gameObject.GetComponent<RectTransform>().offsetMin;
+            if(offset != last_offset)
+            {
+                foreach(string gname in FrameIndices.Keys)
+                {
+                    updateRectangle(gname);
+                }
+            }
+
+            last_offset = offset;
+        }
+
+        public void destroyHighlights(string f_name, string fe_name)
+        {
+            List<string> to_remove = new List<string>();
+            foreach(string gname in FrameIndices.Keys)
+            {
+                if(gname.Contains(f_name+"_"+fe_name))
+                {
+                    GameObject g = GameObject.Find(gname);
+                    if(g != null)
+                    {
+                        Destroy(g);
+                    }
+                    offsets.Remove(gname);
+                    colors.Remove(gname);
+                    to_remove.Add(gname);
+                }
+            }
+            foreach(string remove in to_remove)
+            {
+                FrameIndices.Remove(remove);
+            }
+        }
+
+     
+        public void FixedUpdate()
+        {
+            UpdateHighlights();
+        }
         public void CheckAndSelect()
-        {            
+        { 
+
+            // updateRectangle(start_char, end_char, "frame_fe");        
             int wordIndex = TMP_TextUtilities.FindIntersectingWord(m_TextMeshPro, Input.mousePosition, m_Camera);
             int start = selectedIndices.Item1;
             int end = selectedIndices.Item2;
@@ -95,7 +289,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                 (wordIndex == -1 && Input.GetMouseButtonDown(1)))
             {
                 ClearText();
-            } else if((Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))) {
+            } else if((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
                 WordSelect();
             } else if(wordIndex != -1 && (wordIndex == start || wordIndex == end) && (Input.GetMouseButtonDown(1)))
             {
@@ -131,6 +325,8 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             // {
             //     WordSelect();
             // }
+
+
         }
 
 
@@ -214,7 +410,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             int start = selectedIndices.Item1;
             int end = selectedIndices.Item2;
             string updated = "";
-            string[] byWord = (m_TextMeshPro.text).Split(" ");
+            string[] byWord = (story).Split(" ");
             TMP_WordInfo[] wInfo = m_TextMeshPro.textInfo.wordInfo;
             startIndex = 0;
             if(start != -1){
@@ -224,7 +420,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                     // update result window
                     for(int j = 0; j < wInfo[i].characterCount; j++)
                     {
-                        updated += (m_TextMeshPro.text)[wInfo[i].firstCharacterIndex + j];
+                        updated += (story)[wInfo[i].firstCharacterIndex + j];
                     }
                 }
 

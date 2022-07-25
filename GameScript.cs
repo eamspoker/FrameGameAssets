@@ -18,7 +18,7 @@ namespace ICSI.FrameNet.FrameGame {
 public class GameScript : MonoBehaviour
 {
     #region callback definitions
-        public delegate void OnReceivedCallback(PlayerInfo player);
+        public delegate void OnReceivedCallback(string json);
     #endregion
     #region items in scene
    
@@ -28,6 +28,7 @@ public class GameScript : MonoBehaviour
     [SerializeField] private TMP_Text Result;
     [SerializeField] private GameObject Field;
     [SerializeField] private TMP_InputField WritingBox;
+    public TMP_InputField ReadingBox;
     private CustomTextSelector customText;
 
 
@@ -38,6 +39,8 @@ public class GameScript : MonoBehaviour
 
     public TextMeshProUGUI Story;
     public TextMeshProUGUI Info;
+
+    public GameObject InfoTab;
 
     // Frame Description
     private TMP_Text frameName;
@@ -67,6 +70,18 @@ public class GameScript : MonoBehaviour
     public GameObject UnlockedF;
     public GameObject LockedF;
 
+    // text boxes
+    public GameObject WriteBoxObj;
+    public GameObject ReadBoxObj;
+    public GameObject Annotate;
+    public GameObject FrameMenu;
+
+    // Loading
+    public GameObject FrameBox;
+    public GameObject Loading;
+
+    
+
 
     #endregion
 
@@ -81,7 +96,7 @@ public class GameScript : MonoBehaviour
 
     private bool isInfo = false;
 
-    private List<Dictionary<string, Color>> FEColors;
+    private Dictionary<string, Dictionary<string, Color>> FEColors;
 
     private Dictionary<FE, bool> isComplete = new Dictionary<FE, bool>();
 
@@ -91,113 +106,16 @@ public class GameScript : MonoBehaviour
 
     private bool isFading = false;
 
-    #endregion
+    private bool hasStarted = false;
 
-    #region structures
-    struct FramePlayer
-    {
-        public string ID;
-        public int points;
-        public int approvals;
-        public FramePlayer(string ID)
-        {
-            this.ID = ID;
-            this.points = 0;
-            this.approvals = 0;
-        }
+    private bool isAnnotating = false;
+    string story;
 
-    }
-
-    struct AnnotatedSentence
-    {
-        public string text;
-
-        // Name of FE, (start index, length of substring)
-        public Dictionary<string, (int, int)> labels;
-
-        public AnnotatedSentence(string text)
-        {
-            this.text = text;
-            this.labels = new Dictionary<string, (int, int)>();
-        }
-
-        public AnnotatedSentence(string text, Dictionary<string, (int, int)> labels)
-        {
-            this.text = text;
-            this.labels = labels;
-        }
-    }
-
-    struct FE
-    {
-        public string name;
-        public string description;
-        public string requires;
-        public string excludes;
-
-        public FE(string name, string description, string requires, string excludes)
-        {
-            this.name = name;
-            this.description = description;
-            this.excludes = excludes;
-            this.requires = requires;
-        }
-
-        public FE(string name, string description)
-        {
-            this.name = name;
-            this.description = description;
-            this.excludes = "";
-            this.requires = "";
-        }
-    }
-
-
-    struct Frame 
-    {
-        public string name;
-        public string id;
-        public string def;
-        public AnnotatedSentence[] examples;
-        public FE[] FEs;
-
-        public string[] LUs;
-
-        public Dictionary<AnnotatedSentence, FramePlayer[]> sentences;
-
-        public Frame(string name, string id, string def, AnnotatedSentence[] examples, string[] LUs, FE[] FEs, Dictionary<AnnotatedSentence, FramePlayer[]> sentences)
-        {
-            this.name = name;
-            this.id = id;
-            this.def = def;
-            this.examples = examples;
-            this.LUs = LUs;
-            this.FEs = FEs;
-            this.sentences = sentences;
-        }
-    }
-
-    struct FGame
-    {
-        public Frame[] frames;
-        public FramePlayer fplayer;
-
-        public bool editorMode;
-
-        public FGame(Frame[] frames, FramePlayer fplayer)
-        {
-            this.frames = frames;
-            this.fplayer = fplayer;
-            this.editorMode = false;
-        }
-        public FGame(Frame[] frames, FramePlayer fplayer, bool editorMode)
-        {
-            this.frames = frames;
-            this.fplayer = fplayer;
-            this.editorMode = editorMode;
-        }
-
-    }
+    // highlighting
+    // Dictionary is organized first by frame name
+    // within each entry, there is a dictionary organized by FE name
+    // each entry of the sub-dictionary has start/end tag as well as start/end in marked up version
+    public Dictionary<string, Dictionary<string, ((int, int), (int, int))>> highlights = new Dictionary<string, Dictionary<string, ((int, int), (int, int))>>();
 
     #endregion
 
@@ -207,8 +125,8 @@ public class GameScript : MonoBehaviour
 
         //FEs
         FE target = new FE("Target", "");
-        FE co_part = new FE("Co-participant", "The Co-participant is the accompanying entity (person or object).", "", "Participants");
-        FE part = new FE("Participant", "The Participant is the accompanied entity (person or object).", "", "Participants");
+        FE co_part = new FE("Co-participant", "The Co-participant is the accompanying entity (person or object).", null, new string[1]{"Participants"});
+        FE part = new FE("Participant", "The Participant is the accompanied entity (person or object).", null, new string[1]{"Participants"});
         FE parts = new FE("Participants", "Two or more entities construed as symmetrically and usually equally participating in an event or relation.");
 
         AnnotatedSentence sent1 = new AnnotatedSentence("The mayor was killed ALONG WITH three bodyguards and his driver.", new Dictionary<string, (int, int)>());
@@ -239,88 +157,111 @@ public class GameScript : MonoBehaviour
         FE[] fes = new FE[4]{target, co_part, part, parts};
 
         string[] LUs = new string[6]{"alone", "along with", "in combination", "singly", "together", "with"};
-        Frame Accompaniment = new Frame("Accompaniment", "258", "A Co-participant fills the same role as the Participant in an event or relation.", examples, LUs, fes, new Dictionary<AnnotatedSentence, FramePlayer[]>());
+        Frame Accompaniment = new Frame("Accompaniment", "258", "A Co-participant fills the same role as the Participant in an event or relation.", examples, LUs, null, fes);
 
-        // Player
-        FramePlayer fplayer = new FramePlayer("Person");
 
         // Game
-        FGame game = new FGame(new Frame[1]{Accompaniment}, fplayer);
+        FGame game = new FGame(new Frame[1]{Accompaniment});
 
         return game;
     }
    
     #endregion
 
+    #region actual initializations
+    public void GetFrames()
+    {
+        StartCoroutine(GetRequest("http://127.0.0.1:5000/lookup/!", CreateFrameArray));
+    }
+    public void CreateFrameArray(string jsonData)
+    {
+        FEColors = new Dictionary<string, Dictionary<string, Color>>();
+        object resultValue = JsonUtility.FromJson<FrameList>(jsonData);
+        FrameList flist = (FrameList)Convert.ChangeType(resultValue, typeof(FrameList));
+        Frame[] frames = new Frame[flist.Frames.Length];
+        for(int j = 0; j < flist.Frames.Length; j++)
+        {
+            FrameInfo f = flist.Frames[j];
+            AnnotatedSentence[] examples = new AnnotatedSentence[f.examples.Length];
+            for(int i = 0; i < f.examples.Length; i++)
+            {
+                Example ex = f.examples[i];
+                AnnotatedSentence annot = new AnnotatedSentence(ex.text);
+                annot.labels = new Dictionary<string, (int, int)>();
+                for(int k = 0; k < ex.labels.Length; k++)
+                {
+                    Label entry = ex.labels[k];
+                    annot.labels[entry.title] = (entry.start, entry.length);
+                }
+                examples[i] = annot;
+            }
+
+            FE[] FEs = new FE[f.FEs.Length+1];
+            FEs[0] = new FE("Target", f.name);
+            FEColors[f.name] = new Dictionary<string, Color>();
+            for(int i = 1; i < f.FEs.Length+1; i++)
+            {
+                FEInfo inf = f.FEs[i-1];
+                FE fe = new FE(inf.name, inf.description, inf.requires, inf.excludes);
+                FEs[i] = fe;
+                Color c;
+                if (!ColorUtility.TryParseHtmlString("#" + inf.color + "FF", out c))
+                {
+                    c = UnityEngine.Random.ColorHSV(0f, 1.0f, 1.0f, 1.0f, 0.75f, 1.0f, 0.25f, 0.25f);
+                }
+                c.a = 0.25f;
+                FEColors[f.name][fe.name] = c;
+            }
+
+            frames[j] = new Frame(f.name, f.ID, f.def, examples, f.LUs, f.allLUs, FEs);
+
+        }
+
+        FGame fGame = new FGame(frames);
+
+        game = fGame;
+        Loading.SetActive(false);
+        FrameBox.SetActive(true);
+        FrameMenu.SetActive(true);
+        frameName = (GameObject.Find("FrameName")).GetComponent<TMP_Text>();
+        InfoTab.SetActive(true);
+        PlayGame();
+    }
+    #endregion
 
     #region basic functions
 
      // Initialize components
      void Awake()
      {
-         if(!isInfo)
-         {
-            // Frame Description
-            frameName = (GameObject.Find("FrameName")).GetComponent<TMP_Text>();
-            frameCount = (GameObject.Find("FrameCount")).GetComponent<TMP_Text>();
-            frameSaved = (GameObject.Find("FrameSaved")).GetComponent<TMP_Text>();
 
-            // FE Description
-
-            feName = (GameObject.Find("FEName")).GetComponent<TMP_Text>();
-            feCount = (GameObject.Find("FECount")).GetComponent<TMP_Text>();
-            feSaved = (GameObject.Find("FESaved")).GetComponent<TMP_Text>();
-         }
         
      }
 
     // Start is called before the first frame update
     void Start()
     {
-        if(!isInfo)
-        {
-            // Generate game
-            if(!isTesting)
-            {
-                // reading in stuff here
-                game = createTestGame();
-            } else {
-                game = createTestGame();
-                FEColors = new List<Dictionary<string, Color>>();
-                foreach(Frame frame in game.frames)
-                {
-                    Dictionary<string, Color> dict = new Dictionary<string, Color>();
-                    foreach(FE fe in frame.FEs)
-                    {
-                        Color c = UnityEngine.Random.ColorHSV(0f, 1.0f, 1.0f, 1.0f, 0.5f, 1.0f, 0.25f, 0.25f);
-                        dict[fe.name] = c;
-                        isComplete[fe] = false;
-                    }
-                    FEColors.Add(dict);
-                }
-                UpdateText();
-            }
-        }
-        string PID = PlayerPrefs.GetString("player_id");
-        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/"+PID, UpdatePlayerInfo));
-        customText = Field.GetComponent<CustomTextSelector>();
+        GetFrames();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(game.frames.Length > 0 && !isComplete[game.frames[currentFrame].FEs[currentFE]])
+        // Debug.Log("currentFrame: " + currentFrame + " currentFE: " + currentFE);
+        if(isAnnotating && hasStarted && game.frames.Length > 0 && game.frames[currentFrame].FEs.Length > 0 && !isComplete[game.frames[currentFrame].FEs[currentFE]])
         {
             customText.CheckAndSelect();
-            WritingBox.ActivateInputField();
+            
         }  
     }
 
     // Helper callbacks for getting and saving
-    public void UpdatePlayerInfo(PlayerInfo newPlayer)
+    public void UpdatePlayerInfo(string jsonData)
     {
-        playerObject = newPlayer;
+        object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
+        playerObject = (PlayerInfo)Convert.ChangeType(resultValue, typeof(PlayerInfo));
         PlayerText.text = playerObject.username + "'s Cafe";
+        hasStarted = true;
     }
 
     #endregion
@@ -328,7 +269,10 @@ public class GameScript : MonoBehaviour
     #region change display text
     void UpdateText()
     {
-        if(game.frames.Length > 0)
+        if(!isAnnotating)
+        {
+            frameName.text = (game.frames[currentFrame]).name;
+        } else if(!isInfo && game.frames.Length > 0)
         {
             (GameObject.Find("FELeft")).SetActive(true);
             (GameObject.Find("FERight")).SetActive(true);
@@ -337,11 +281,11 @@ public class GameScript : MonoBehaviour
             frameSaved.text = "" + completeFrame + " done";
 
             FE fe = game.frames[currentFrame].FEs[currentFE];
-            Dictionary<string, Color> colors = FEColors[currentFrame];
+            Dictionary<string, Color> colors = FEColors[(game.frames[currentFrame]).name];
             string nameFE = fe.name;
-            string color = ColorUtility.ToHtmlStringRGBA(colors[nameFE]);
             if(nameFE != "Target")
             {
+                string color = ColorUtility.ToHtmlStringRGBA(colors[nameFE]);
                 feName.text = "<mark=#" + color + ">" + nameFE + "</mark>";
             } else
             {
@@ -349,7 +293,6 @@ public class GameScript : MonoBehaviour
             }
             feCount.text = "" + (currentFE+1) +"/"+ game.frames[currentFrame].FEs.Length;
             feSaved.text = "" + completeFE + " done";
-
 
             if(isComplete[fe])
             {
@@ -363,7 +306,7 @@ public class GameScript : MonoBehaviour
 
                 if(fe.name != "Target")
                 {
-                    Result.color = FEColors[currentFrame][fe.name];
+                    Result.color = FEColors[(game.frames[currentFrame]).name][fe.name];
                     Color c = Result.color;
                     c.a = 1.0f;
                     c.r += 0.3f;
@@ -406,47 +349,48 @@ public class GameScript : MonoBehaviour
         frameNameI.text = (game.frames[infoFrame]).name;
         frameCountI.text = "" + (infoFrame+1) +"/"+ game.frames.Length;
         string desc = "<u><b>Examples</b></u>\n";
-        Dictionary<string, Color> colors = FEColors[infoFrame];
+        Dictionary<string, Color> colors = FEColors[(game.frames[infoFrame]).name];
 
         foreach(AnnotatedSentence a in game.frames[infoFrame].examples)
         {
             List<(int, int)> shifts = new List<(int, int)>();
             string sent = a.text;
-            foreach(KeyValuePair<string, (int, int)> entry in a.labels)
+            string original = a.text;
+            int totalShift = 0;
+            foreach(KeyValuePair<string, (int,int)> entry in a.labels)
             {
-                if(entry.Key != "Target")
+                bool isCore = false;
+                foreach(FE fe in game.frames[infoFrame].FEs)
                 {
-                    int start = entry.Value.Item1;
-                    int end = entry.Value.Item1 + entry.Value.Item2;
+                    if(fe.name == entry.Key) isCore = true;
+                }
 
-                    foreach((int, int) shift in shifts)
-                    {
-                        if(start >= shift.Item1 + shift.Item2)
-                        {
-                            start += shift.Item2;
-                        }
-
-                        if(end >= shift.Item1 + shift.Item2)
-                        {
-                            end += shift.Item2;
-                        }
-                    }
-
+                if(isCore && entry.Key != "Target" && entry.Key != "Support")
+                {
+                    int start = entry.Value.Item1+totalShift;
+                    int len = entry.Value.Item2;
                     string color = ColorUtility.ToHtmlStringRGBA(colors[entry.Key]);
                     sent = sent.Insert(start, "<mark=#" + color + ">");
-                    shifts.Add((start, 16));
-
-                    if(end >= start)
-                    {
-                        end += 16;
-                    }
-
-                    sent = sent.Insert(end, "</mark>");
-                    shifts.Add((end, 7));
-                }     
+                    sent = sent.Insert(start+len+("<mark=#" + color + ">").Length, "</mark>");
+                    totalShift += ("<mark=#" + color + ">").Length + "</mark>".Length;
+                }  
             }
 
-            desc += sent + "\n";
+            if(a.labels.Keys.Contains("Target"))
+            {
+                string targetText = original.Substring(a.labels["Target"].Item1, a.labels["Target"].Item2);
+                sent = sent.Insert(sent.IndexOf(targetText), "<b>");
+                sent = sent.Insert(sent.IndexOf(targetText)+targetText.Length, "</b>");
+            }
+
+            if(a.labels.Keys.Contains("Support"))
+            {
+                string targetText = original.Substring(a.labels["Support"].Item1, a.labels["Support"].Item2);
+                sent = sent.Insert(sent.IndexOf(targetText), "<i>");
+                sent = sent.Insert(sent.IndexOf(targetText)+targetText.Length, "</i>");
+            }
+
+            desc += sent + "\n\n";
 
         }
 
@@ -475,11 +419,26 @@ public class GameScript : MonoBehaviour
 
     #endregion
 
-
     #region general gameplay
 
     public void PlayGame()
     {
+        if(!isInfo)
+        {
+            foreach(Frame frame in game.frames)
+            {
+                highlights[frame.name] = new Dictionary<string, ((int, int), (int, int))>();
+                foreach(FE fe in frame.FEs)
+                {
+                    isComplete[fe] = false;
+                }
+            }
+            UpdateText();
+        } 
+        string PID = PlayerPrefs.GetString("player_id");
+        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/get/"+PID, UpdatePlayerInfo));
+        customText = Field.GetComponent<CustomTextSelector>();
+
         
     }
 
@@ -506,7 +465,7 @@ public class GameScript : MonoBehaviour
                 noPunct = noPunct.ToLower();
 
                 // Check if the string (punctuation removed) is an acceptable LU
-                foreach(string lu in game.frames[currentFrame].LUs)
+                foreach(string lu in game.frames[currentFrame].allLUs)
                 {
                     if(lu == noPunct)
                     {
@@ -545,11 +504,14 @@ public class GameScript : MonoBehaviour
             }
         } else {
             isComplete[game.frames[currentFrame].FEs[currentFE]] = false;
-            if(currentSentence.labels.Count <= 1)
+            if(completeFE <= 1)
             {
                 currentSentence = default(AnnotatedSentence);
             }
             customText.ClearText();
+            string f_name = game.frames[currentFrame].name;
+            string fe_name = game.frames[currentFrame].FEs[currentFE].name;
+            customText.destroyHighlights(f_name, fe_name);
             completeFE--;
         }
 
@@ -560,7 +522,7 @@ public class GameScript : MonoBehaviour
         if(game.frames.Length > 0 && completeFE == game.frames[currentFrame].FEs.Length)
             {
                 UnlockedF.SetActive(false);
-                LockedF.SetActive(true);
+                LockedF.SetActive(false);
                 AnnotationInfo[] annotations = new AnnotationInfo[game.frames[currentFrame].FEs.Length];
                 foreach(KeyValuePair<string, (int,int)> entry in currentSentence.labels)
                 {
@@ -572,14 +534,28 @@ public class GameScript : MonoBehaviour
                     annot.isEditor = false;
                     annot.text = currentSentence.text;
                     string json = JsonUtility.ToJson(annot);
+                    Debug.Log(json);
                     StartCoroutine(PostRequest("http://127.0.0.1:5000/frames/update/"+game.frames[currentFrame].id, json));
                 }
                 
                 List<Frame> frames = new List<Frame>(game.frames);
+                foreach(FE fe in game.frames[currentFrame].FEs)
+                {
+                    isComplete[fe] = false;
+                }
                 frames.RemoveAt(currentFrame);
                 game.frames = frames.ToArray();
+                currentFE = 0;
                 completeFrame++;
+                completeFE = 0;
+                Result.text = "Not in sentence";
                 onRightFClick();
+                
+                UpdateText();
+                currentSentence = default(AnnotatedSentence);
+
+                UnlockedF.SetActive(true);
+                LockedF.SetActive(true);
             } else {
                 ErrorText.text = "All FEs must be completed before annotation is sent off.";
                 if(!isFading)
@@ -593,11 +569,10 @@ public class GameScript : MonoBehaviour
             
     }
 
-
     private void createLabel((int, int) label)
     {
         string name = game.frames[currentFrame].FEs[currentFE].name;
-
+        Dictionary<string, Color> colors = FEColors[(game.frames[currentFrame]).name];
         if(label.Item1 < 0)
         {
             if(currentSentence.Equals(default(AnnotatedSentence)))
@@ -611,7 +586,6 @@ public class GameScript : MonoBehaviour
             
         } else {
         // Find the start and end of the sentence
-        string story = Field.GetComponent<TMP_Text>().text;
         int[] potentialStart = new int[3]{story.LastIndexOf('.',label.Item1), 
                                 story.LastIndexOf('?', label.Item1), 
                                 story.LastIndexOf('!', label.Item1)};
@@ -646,16 +620,19 @@ public class GameScript : MonoBehaviour
         string sent = story.Substring(start, end-start);
         if(currentSentence.Equals(default(AnnotatedSentence)) || currentSentence.text == "")
         {
+            customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
             if(currentSentence.Equals(default(AnnotatedSentence))) currentSentence = new AnnotatedSentence(sent);
             currentSentence.text = sent;
             currentSentence.labels[name] = (label.Item1-start, label.Item2-label.Item1);
             isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
+            customText.ClearText();
             completeFE++;
             
         } else
         {
             if(currentSentence.text == sent)
             {
+                customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
                 currentSentence.labels[name] = (label.Item1-start, label.Item2-label.Item1);
                 isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
                 customText.ClearText();
@@ -677,8 +654,6 @@ public class GameScript : MonoBehaviour
 
     }
     #endregion
-
-    
 
     #region info screen
     public void onInfoClick()
@@ -717,18 +692,16 @@ public class GameScript : MonoBehaviour
                 } else {
                     //Convert to json string
                     string jsonData = Encoding.ASCII.GetString(webRequest.downloadHandler.data);
-                    //Convert to Object
-                    object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
-                    playerObject = (PlayerInfo)Convert.ChangeType(resultValue, typeof(PlayerInfo));
+                    Debug.Log(jsonData);
                     // Send back
                     webRequest.downloadHandler.Dispose();
-                    callback(playerObject);
+                    callback(jsonData);
                 }
             }
             
         }
 
-        IEnumerator PostRequest(string url, string json)
+    IEnumerator PostRequest(string url, string json)
         {
             
             using (UnityWebRequest uwr = new UnityWebRequest(url, "POST"))
@@ -754,6 +727,26 @@ public class GameScript : MonoBehaviour
 
     #endregion
 
+    #region writing to annotating
+    public void onStoryFinish()
+    {
+        isAnnotating = true;
+        ReadBoxObj.SetActive(true);
+        ReadingBox.text = WritingBox.text; 
+        WriteBoxObj.SetActive(false);
+        Annotate.SetActive(true);
+        FrameMenu.SetActive(false);
+        frameCount = (GameObject.Find("FrameCount")).GetComponent<TMP_Text>();
+        frameSaved = (GameObject.Find("FrameSaved")).GetComponent<TMP_Text>();
+        feName = (GameObject.Find("FEName")).GetComponent<TMP_Text>();
+        feCount = (GameObject.Find("FECount")).GetComponent<TMP_Text>();
+        feSaved = (GameObject.Find("FESaved")).GetComponent<TMP_Text>();
+        story = Field.GetComponent<TMP_Text>().text;
+        customText.SetString(story);
+        UpdateText();
+    }
+    #endregion
+
     #region increment/decrement frames/FEs
 
     public void onLeftFIClick()
@@ -761,40 +754,56 @@ public class GameScript : MonoBehaviour
         if(infoFrame == 0) infoFrame = game.frames.Length-1;
         else infoFrame--;
 
-        UpdateText();
+        UpdateInfo();
     }
     public void onRightFIClick()
     {
         if(infoFrame == game.frames.Length-1) infoFrame = 0;
         else infoFrame++;
 
-        UpdateText();
+        UpdateInfo();
     }
     public void onLeftFClick()
     {
-        if(currentFrame == 0) currentFrame = game.frames.Length-1;
+        if(currentFrame <= 0) currentFrame = game.frames.Length-1;
         else currentFrame--;
-
+        currentFE = 0;
+        completeFE = 0;
+        foreach(FE fe in game.frames[currentFrame].FEs)
+        {
+            if(isComplete[fe]) completeFE++;
+        }
         UpdateText();
     }
     public void onRightFClick()
     {
-        if(currentFrame == game.frames.Length-1) currentFrame = 0;
+        currentFE = 0;
+        if(currentFrame >= game.frames.Length-1) currentFrame = 0;
         else currentFrame++;
+
+        completeFE = 0;
+        if(game.frames.Length > 0)
+        {
+            foreach(FE fe in game.frames[currentFrame].FEs)
+            {
+                if(isComplete[fe]) completeFE++;
+            }
+        }
+
 
         UpdateText();
     }
 
     public void onLeftFEClick()
     {
-        if(currentFE == 0) currentFE = game.frames[currentFrame].FEs.Length-1;
+        if(currentFE <= 0) currentFE = game.frames[currentFrame].FEs.Length-1;
         else currentFE--;
         customText.ClearText();
         UpdateText();
     }
     public void onRightFEClick()
     {
-        if(currentFE== game.frames[currentFrame].FEs.Length-1) currentFE = 0;
+        if(currentFE >= game.frames[currentFrame].FEs.Length-1) currentFE = 0;
         else currentFE++;
 
         customText.ClearText();
