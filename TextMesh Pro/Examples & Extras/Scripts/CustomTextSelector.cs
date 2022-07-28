@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace TMPro.Examples
 {
 
-public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerUpHandler, IPointerDownHandler
+public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerClickHandler
 {
     #pragma warning disable 0618 // Disabled warning due to SetVertices being deprecated until new release with SetMesh() is available.
 
@@ -23,6 +23,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
 
         private Dictionary<string, Vector3> origins = new Dictionary<string, Vector3>();
         private Dictionary<string, Color> colors = new Dictionary<string, Color>();
+        private Dictionary<string, (string, string)> fnames = new Dictionary<string, (string, string)>();
 
 
         public TMP_Text Result;
@@ -38,7 +39,6 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
         private Camera m_Camera;
 
         // Flags
-        private bool isHoveringObject;
         private int m_selectedWord = -1;
     
 
@@ -115,10 +115,10 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             
             int start_line = m_TextMeshPro.textInfo.characterInfo[start_char].lineNumber;
             int end_line = m_TextMeshPro.textInfo.characterInfo[end_char].lineNumber;
-            
             if(start_line == end_line)
             {
                 createRectangle(start_char, end_char, f_name + "_"+ fe_name, color);
+                fnames[ f_name + "_"+ fe_name] = (f_name, fe_name);
 
             } else
             {
@@ -129,12 +129,17 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                     if(i == start_line)
                     {
                         createRectangle(start_char, endOfLineChar, f_name + "_"+ fe_name+(i-start_line), color);
+
                     } else if(i == end_line)
                     {
                         createRectangle(startOfLineChar, end_char, f_name + "_"+ fe_name+(i-start_line), color);
+                        
                     } else {
                         createRectangle(startOfLineChar, endOfLineChar, f_name + "_"+ fe_name+(i-start_line), color);
+
                     }
+
+                    fnames[f_name + "_"+ fe_name+(i-start_line)] = (f_name, fe_name);
                 }
             }
         }
@@ -264,6 +269,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                     offsets.Remove(gname);
                     colors.Remove(gname);
                     to_remove.Add(gname);
+
                 }
             }
             foreach(string remove in to_remove)
@@ -271,8 +277,23 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
                 FrameIndices.Remove(remove);
             }
         }
-
      
+        public void destroyAllHighlights()
+        {
+            foreach(string gname in FrameIndices.Keys)
+            {
+                GameObject g = GameObject.Find(gname);
+                if(g != null)
+                {
+                    Destroy(g);
+                }
+            }
+
+            fnames = new Dictionary<string, (string, string)>();
+            offsets = new Dictionary<string, Vector2>();
+            colors = new Dictionary<string, Color>();
+            FrameIndices = new Dictionary<string, (int, int)>();
+        }
         public void FixedUpdate()
         {
             UpdateHighlights();
@@ -303,37 +324,25 @@ public class CustomTextSelector : MonoBehaviour, IPointerEnterHandler, IPointerE
             UpdateResult();
         }
 
-
-        public void OnPointerEnter(PointerEventData eventData)
-        {
-            //Debug.Log("OnPointerEnter()");
-            isHoveringObject = true;
-        }
-
-
         public void OnPointerExit(PointerEventData eventData)
         {
-            //Debug.Log("OnPointerExit()");
-            isHoveringObject = false;
             lastdeSelected = -1;
         }
 
 
-        public void OnPointerDown(PointerEventData eventData)
-        {
-            // if(isHoveringObject)
-            // {
-            //     WordSelect();
-            // }
+        // open link to FrameNet frame page (link ID should be frame name)
+        public void OnPointerClick (PointerEventData eventData) {  
+            int linkIndex = TMP_TextUtilities.FindIntersectingLink(m_TextMeshPro, Input.mousePosition, m_Camera);  
+            if (linkIndex == -1)    
+                return;  
+            TMP_LinkInfo linkInfo = m_TextMeshPro.textInfo.linkInfo[linkIndex];
+            string selectedLink = linkInfo.GetLinkID();  
+            if (selectedLink == "ID") {   
+                Application.OpenURL ("https://framenet.icsi.berkeley.edu/");          
+            } else {
+                Application.OpenURL ("https://framenet.icsi.berkeley.edu"+selectedLink);
 
-
-        }
-
-
-        public void OnPointerUp(PointerEventData eventData)
-        {
-                
-
+            }
         }
 
         void WordSelect()

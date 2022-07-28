@@ -10,6 +10,25 @@ public class PlayerInfo
     public string id;
     public string username;
     public int coins;
+    public bool isFirstTime;
+
+}
+
+[Serializable]
+public class ErrorInfo
+{
+    public string last_text;
+    public string error_message;
+    public string error_source;
+    public string frame;
+
+}
+
+[Serializable]
+public class AgreementInfo
+{
+    public string id;
+    public string time;
 
 }
 
@@ -20,8 +39,33 @@ public class AnnotationInfo
     public string fe_id;
     public int startIndex;
     public int length;
-    public bool isEditor;
     public string text;
+}
+
+
+[Serializable]
+public class LabelInfo
+{
+    public string author_id;
+    public string fe_id;
+    public int startIndex;
+    public int length;
+}
+
+
+[Serializable]
+public class SentenceInfo
+{
+    public LabelInfo[] labels;
+    public string text;
+    public string frame_name;
+}
+
+
+[Serializable]
+public class SentenceList
+{
+    public SentenceInfo[] list;
 }
 
 [Serializable]

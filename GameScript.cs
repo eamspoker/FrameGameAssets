@@ -13,6 +13,7 @@ using System.Linq;
 using System.IO;
 using System.Text;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 
 namespace ICSI.FrameNet.FrameGame {
 public class GameScript : MonoBehaviour
@@ -43,7 +44,7 @@ public class GameScript : MonoBehaviour
     public GameObject InfoTab;
 
     // Frame Description
-    private TMP_Text frameName;
+    public TMP_Text frameName;
     private TMP_Text frameCount;
     private TMP_Text frameSaved;
 
@@ -79,6 +80,9 @@ public class GameScript : MonoBehaviour
     // Loading
     public GameObject FrameBox;
     public GameObject Loading;
+    public GameObject FELeft;
+    public GameObject FERight;
+
 
     
 
@@ -86,7 +90,6 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region helper variables
-    private bool isTesting = true;
     private int currentFrame = 0;
     private int infoFrame = 0;
     private int currentFE = 0;
@@ -169,11 +172,11 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region actual initializations
-    public void GetFrames()
+    private void GetFrames()
     {
-        StartCoroutine(GetRequest("http://127.0.0.1:5000/lookup/!", CreateFrameArray));
+        StartCoroutine(GetRequest("https://frame-game-backend.herokuapp.com/lookup/!", CreateFrameArray));
     }
-    public void CreateFrameArray(string jsonData)
+    private void CreateFrameArray(string jsonData)
     {
         FEColors = new Dictionary<string, Dictionary<string, Color>>();
         object resultValue = JsonUtility.FromJson<FrameList>(jsonData);
@@ -223,8 +226,8 @@ public class GameScript : MonoBehaviour
         Loading.SetActive(false);
         FrameBox.SetActive(true);
         FrameMenu.SetActive(true);
-        frameName = (GameObject.Find("FrameName")).GetComponent<TMP_Text>();
         InfoTab.SetActive(true);
+        hasStarted = true;
         PlayGame();
     }
     #endregion
@@ -234,14 +237,16 @@ public class GameScript : MonoBehaviour
      // Initialize components
      void Awake()
      {
-
+        string PID = PlayerPrefs.GetString("player_id");
+        StartCoroutine(GetRequest("https://frame-game-backend.herokuapp.com/players/get/"+PID, UpdatePlayerInfo));
+        customText = Field.GetComponent<CustomTextSelector>();
         
      }
 
     // Start is called before the first frame update
     void Start()
     {
-        GetFrames();
+
     }
 
     // Update is called once per frame
@@ -256,12 +261,49 @@ public class GameScript : MonoBehaviour
     }
 
     // Helper callbacks for getting and saving
-    public void UpdatePlayerInfo(string jsonData)
+    private void UpdatePlayerInfo(string jsonData)
     {
         object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
         playerObject = (PlayerInfo)Convert.ChangeType(resultValue, typeof(PlayerInfo));
-        PlayerText.text = playerObject.username + "'s Cafe";
-        hasStarted = true;
+        PlayerText.text = playerObject.username + "\'s Cafe";
+        // Debug.Log(playerObject.id);
+        GetFrames();
+    }
+
+    // Load view of other's sentences
+    public void onViewModeEnable()
+    {
+        if(hasStarted)
+        {
+            SceneManager.LoadScene("ViewerMode");
+        } else {
+            ErrorText.text = "Cannot switch modes while frames are still loading.";
+            if(!isFading)
+            {
+                StartFadeIn(Error);
+                StartTextFadeIn(Error, ErrorText);
+                StartFadeOut(Error);
+                StartTextFadeOut(Error, ErrorText);
+            }
+        }
+    }
+
+    // Load homepage
+    public void onStartEnable()
+    {
+        if(hasStarted)
+        {
+            SceneManager.LoadScene("StartScreen");
+        } else {
+            ErrorText.text = "Cannot switch modes while frames are still loading.";
+            if(!isFading)
+            {
+                StartFadeIn(Error);
+                StartTextFadeIn(Error, ErrorText);
+                StartFadeOut(Error);
+                StartTextFadeOut(Error, ErrorText);
+            }
+        }
     }
 
     #endregion
@@ -329,7 +371,7 @@ public class GameScript : MonoBehaviour
         {
             frameName.text = "All Frames Completed";
             frameCount.text = "";
-            frameSaved.text = "" + completeFrame + " done";;
+            frameSaved.text = "" + completeFrame + " done";
 
             Result.text = "Not in sentence.";
             Result.color = Color.white;
@@ -338,90 +380,113 @@ public class GameScript : MonoBehaviour
             UnlockedFE.SetActive(false);
             LockedFE.SetActive(false);
 
-            (GameObject.Find("FELeft")).SetActive(false);
-            (GameObject.Find("FERight")).SetActive(false);
+            FELeft.SetActive(false);
+            FERight.SetActive(false);
 
         }
     }
 
     void UpdateInfo()
     {
+        if(game.frames.Length > 0)
+        {
         frameNameI.text = (game.frames[infoFrame]).name;
         frameCountI.text = "" + (infoFrame+1) +"/"+ game.frames.Length;
         string desc = "<u><b>Examples</b></u>\n";
         Dictionary<string, Color> colors = FEColors[(game.frames[infoFrame]).name];
-
-        foreach(AnnotatedSentence a in game.frames[infoFrame].examples)
-        {
-            List<(int, int)> shifts = new List<(int, int)>();
-            string sent = a.text;
-            string original = a.text;
-            int totalShift = 0;
-            foreach(KeyValuePair<string, (int,int)> entry in a.labels)
+        string last_example = "";
+        try {
+            foreach(AnnotatedSentence a in game.frames[infoFrame].examples)
             {
-                bool isCore = false;
-                foreach(FE fe in game.frames[infoFrame].FEs)
+                List<(int, int)> shifts = new List<(int, int)>();
+                string sent = a.text;
+                string original = a.text;
+                last_example = a.text;
+                int totalShift = 0;
+                foreach(KeyValuePair<string, (int,int)> entry in a.labels)
                 {
-                    if(fe.name == entry.Key) isCore = true;
+                    bool isCore = false;
+                    foreach(FE fe in game.frames[infoFrame].FEs)
+                    {
+                        if(fe.name == entry.Key) isCore = true;
+                    }
+
+
+                    if(isCore && entry.Key != "Target" && entry.Key != "Support")
+                    {
+                        int start = entry.Value.Item1+totalShift;
+                        int len = entry.Value.Item2;
+                        string color = ColorUtility.ToHtmlStringRGBA(colors[entry.Key]);
+                        sent = sent.Insert(start, "<mark=#" + color + ">");
+                        sent = sent.Insert(start+len+("<mark=#" + color + ">").Length, "</mark>");
+                        totalShift += ("<mark=#" + color + ">").Length + "</mark>".Length;
+                    }  
                 }
 
-                if(isCore && entry.Key != "Target" && entry.Key != "Support")
+                if(a.labels.Keys.Contains("Target"))
                 {
-                    int start = entry.Value.Item1+totalShift;
-                    int len = entry.Value.Item2;
-                    string color = ColorUtility.ToHtmlStringRGBA(colors[entry.Key]);
-                    sent = sent.Insert(start, "<mark=#" + color + ">");
-                    sent = sent.Insert(start+len+("<mark=#" + color + ">").Length, "</mark>");
-                    totalShift += ("<mark=#" + color + ">").Length + "</mark>".Length;
-                }  
+                    string targetText = original.Substring(a.labels["Target"].Item1, a.labels["Target"].Item2);
+                    sent = sent.Insert(sent.IndexOf(targetText), "<b>");
+                    sent = sent.Insert(sent.IndexOf(targetText)+targetText.Length, "</b>");
+                }
+
+                if(a.labels.Keys.Contains("Support"))
+                {
+                    string supportText = original.Substring(a.labels["Support"].Item1, a.labels["Support"].Item2);
+                    sent = sent.Insert(sent.IndexOf(supportText), "<i>");
+                    sent = sent.Insert(sent.IndexOf(supportText)+supportText.Length, "</i>");
+                }
+
+                desc += sent + "\n\n";
+
             }
 
-            if(a.labels.Keys.Contains("Target"))
+            desc += "\n<u><b>Target</b></u>\n";
+            desc += "The target is the word or phrase that evokes this frame. Acceptable targets for this frame include:\n\n";
+            foreach(string LU in game.frames[infoFrame].LUs)
             {
-                string targetText = original.Substring(a.labels["Target"].Item1, a.labels["Target"].Item2);
-                sent = sent.Insert(sent.IndexOf(targetText), "<b>");
-                sent = sent.Insert(sent.IndexOf(targetText)+targetText.Length, "</b>");
+                desc += LU + "\n";
             }
 
-            if(a.labels.Keys.Contains("Support"))
+
+            desc += "\n<u><b>Frame Elements</b></u>\n";
+            foreach(FE fe in game.frames[infoFrame].FEs)
             {
-                string targetText = original.Substring(a.labels["Support"].Item1, a.labels["Support"].Item2);
-                sent = sent.Insert(sent.IndexOf(targetText), "<i>");
-                sent = sent.Insert(sent.IndexOf(targetText)+targetText.Length, "</i>");
+                if(fe.name != "Target")
+                {
+                    string color = ColorUtility.ToHtmlStringRGBA(colors[fe.name]);
+                    desc += "<mark=#" + color + ">" + fe.name + "</mark>" + ": " +  fe.description +"\n\n";
+                }
             }
 
-            desc += sent + "\n\n";
+            desc += "\n<u><b>Description</b></u>\n" + game.frames[infoFrame].def + "\n";
+
+            descI.text = desc;
+        } catch (Exception e) {
+            descI.text = "Sorry, this frame is currently unavailable. Please see the FrameNet frame index <u><b><link=\"/fndrupal/frameIndex\">here</link></b></u>.";
+            ErrorInfo ei = new ErrorInfo();
+            ei.last_text = last_example;
+            ei.error_message = e.Message;
+            ei.error_source = e.Source;
+            ei.frame = (game.frames[infoFrame]).name;
+            string json = JsonUtility.ToJson(ei);
+            StartCoroutine(PostRequest("https://frame-game-backend.herokuapp.com/frames/error", json));
 
         }
+        } else {
+            frameNameI.text = "All Frames Completed";
+            frameCountI.text = "";
+            descI.text = "Nothing to see here!";
 
-        desc += "\n<u><b>Target</b></u>\n";
-        desc += "The target is the word or phrase that evokes this frame. Acceptable targets for this frame include:\n\n";
-        foreach(string LU in game.frames[infoFrame].LUs)
-        {
-            desc += LU + "\n";
+        
         }
-
-
-        desc += "\n<u><b>Frame Elements</b></u>\n";
-        foreach(FE fe in game.frames[infoFrame].FEs)
-        {
-            if(fe.name != "Target")
-            {
-                string color = ColorUtility.ToHtmlStringRGBA(colors[fe.name]);
-                desc += "<mark=#" + color + ">" + fe.name + "</mark>" + ": " +  fe.description +"\n\n";
-            }
-        }
-
-        desc += "\n<u><b>Description</b></u>\n" + game.frames[infoFrame].def + "\n";
-
-        descI.text = desc;
     }
 
     #endregion
 
     #region general gameplay
 
-    public void PlayGame()
+    private void PlayGame()
     {
         if(!isInfo)
         {
@@ -435,9 +500,6 @@ public class GameScript : MonoBehaviour
             }
             UpdateText();
         } 
-        string PID = PlayerPrefs.GetString("player_id");
-        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/get/"+PID, UpdatePlayerInfo));
-        customText = Field.GetComponent<CustomTextSelector>();
 
         
     }
@@ -467,7 +529,12 @@ public class GameScript : MonoBehaviour
                 // Check if the string (punctuation removed) is an acceptable LU
                 foreach(string lu in game.frames[currentFrame].allLUs)
                 {
-                    if(lu == noPunct)
+                    bool containedInLU = true;
+                    foreach(string word in noPunct.Split(" "))
+                    {
+                        if(!lu.Contains(word)) containedInLU = false;
+                    }
+                    if(containedInLU)
                     {
                         AlertText.text = "Saved " + game.frames[currentFrame].FEs[currentFE].name;
                         if(!isFading)
@@ -481,6 +548,7 @@ public class GameScript : MonoBehaviour
                         isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
                         createLabel(newLabel);
                         Result.text = annotation;
+                        break;
                     }
                 }
 
@@ -528,14 +596,13 @@ public class GameScript : MonoBehaviour
                 {
                     AnnotationInfo annot = new AnnotationInfo();
                     annot.author_id = playerObject.id;
+                    
                     annot.fe_id = entry.Key;
                     annot.startIndex = entry.Value.Item1;
                     annot.length = entry.Value.Item2;
-                    annot.isEditor = false;
                     annot.text = currentSentence.text;
                     string json = JsonUtility.ToJson(annot);
-                    Debug.Log(json);
-                    StartCoroutine(PostRequest("http://127.0.0.1:5000/frames/update/"+game.frames[currentFrame].id, json));
+                    StartCoroutine(PostRequest("https://frame-game-backend.herokuapp.com/frames/update/"+game.frames[currentFrame].id, json));
                 }
                 
                 List<Frame> frames = new List<Frame>(game.frames);
@@ -543,13 +610,15 @@ public class GameScript : MonoBehaviour
                 {
                     isComplete[fe] = false;
                 }
+
                 frames.RemoveAt(currentFrame);
                 game.frames = frames.ToArray();
-                currentFE = 0;
                 completeFrame++;
+                currentFE = 0;
                 completeFE = 0;
                 Result.text = "Not in sentence";
                 onRightFClick();
+                onLeftFIClick();
                 
                 UpdateText();
                 currentSentence = default(AnnotatedSentence);
@@ -620,7 +689,10 @@ public class GameScript : MonoBehaviour
         string sent = story.Substring(start, end-start);
         if(currentSentence.Equals(default(AnnotatedSentence)) || currentSentence.text == "")
         {
-            customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
+            if(name != "Target")
+            {
+                customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
+            }
             if(currentSentence.Equals(default(AnnotatedSentence))) currentSentence = new AnnotatedSentence(sent);
             currentSentence.text = sent;
             currentSentence.labels[name] = (label.Item1-start, label.Item2-label.Item1);
@@ -632,7 +704,10 @@ public class GameScript : MonoBehaviour
         {
             if(currentSentence.text == sent)
             {
-                customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
+                if(name != "Target")
+                {
+                    customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
+                }
                 currentSentence.labels[name] = (label.Item1-start, label.Item2-label.Item1);
                 isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
                 customText.ClearText();
@@ -658,6 +733,7 @@ public class GameScript : MonoBehaviour
     #region info screen
     public void onInfoClick()
     {
+        customText.ClearText();
         FrameDesc.SetActive(false);
         FrameInfo.SetActive(true);
         StoryBG.SetActive(false);
@@ -692,7 +768,6 @@ public class GameScript : MonoBehaviour
                 } else {
                     //Convert to json string
                     string jsonData = Encoding.ASCII.GetString(webRequest.downloadHandler.data);
-                    Debug.Log(jsonData);
                     // Send back
                     webRequest.downloadHandler.Dispose();
                     callback(jsonData);
@@ -720,7 +795,7 @@ public class GameScript : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log("Received: " + uwr.downloadHandler.text);
+                    // Debug.Log("Received: " + uwr.downloadHandler.text);
                 }
             }
             }
@@ -903,7 +978,7 @@ public class GameScript : MonoBehaviour
     }
 
     #endregion
-    
+
 
 
 }

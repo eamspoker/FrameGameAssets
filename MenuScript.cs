@@ -15,7 +15,6 @@ namespace ICSI.FrameNet.FrameGame {
 public class MenuScript : MonoBehaviour // PunCallbacks
 {
 
-    [SerializeField] private string VersionName = "1";
     [SerializeField] private GameObject StartButton;
     private string username;
     private string id;
@@ -71,6 +70,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             } else {
                 //Convert to json string
                  string jsonData = Encoding.ASCII.GetString(webRequest.downloadHandler.data);
+                // Debug.Log(jsonData);
                     //Convert to Object
                     object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
                     PlayerInfo inf = (PlayerInfo)Convert.ChangeType(resultValue, typeof(PlayerInfo));
@@ -92,7 +92,8 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             }
         }
 
-        StartCoroutine(PostRequest("http://127.0.0.1:5000/players/update", json));
+        // Debug.Log(json);
+        StartCoroutine(PostRequest("https://frame-game-backend.herokuapp.com/players/update", json));
          
     }
 
@@ -115,7 +116,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             }
             else
             {
-                Debug.Log("Received: " + uwr.downloadHandler.text);
+                // Debug.Log("Received: " + uwr.downloadHandler.text);
                 // Enable start button
                 Connecting.SetActive(false);
                 StartButton.SetActive(true);
@@ -139,7 +140,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
         // }
         // PhotonNetwork.JoinRandomRoom();
 
-        SceneManager.LoadScene("SRLGame");
+        SceneManager.LoadScene("StartScreen");
     }
 
 
@@ -228,7 +229,6 @@ public class MenuScript : MonoBehaviour // PunCallbacks
         // string aToken = AccessToken.CurrentAccessToken.TokenString;
         string facebookId = AccessToken.CurrentAccessToken.UserId;
         id = facebookId;
-        Debug.Log(id);
         FB.API("me?fields=name", HttpMethod.GET, NameCallBack);
         // PhotonNetwork.AuthValues = new AuthenticationValues();
         // PhotonNetwork.AuthValues.AuthType = CustomAuthenticationType.FacebookGaming;
@@ -250,7 +250,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             Debug.Log(result.Error);
         }
 
-        StartCoroutine(GetRequest("http://127.0.0.1:5000/players/get/"+id));
+        StartCoroutine(GetRequest("https://frame-game-backend.herokuapp.com/players/get/"+id));
     }
 
     // Callbacks for joining a random room
