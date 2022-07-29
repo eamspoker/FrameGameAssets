@@ -24,8 +24,6 @@ The Frame Game is an in-progress crowdsourcing game that seeks to provide users 
 - Unity (C# for scripting)
 - Flask (Python) for the backend
 
-
-
 ## Setting Up
 
 
