@@ -8,6 +8,10 @@ using System.Collections.Generic;
 namespace TMPro.Examples
 {
 
+// This is referenced by the in-game scripts to highlight words and select words
+// It is modeled after TMPro's Text Selector B. Please note it must stay in the
+// TMPro Example namespace and folder.
+
 public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerClickHandler
 {
     #pragma warning disable 0618 // Disabled warning due to SetVertices being deprecated until new release with SetMesh() is available.
@@ -18,48 +22,66 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
         private TextMeshProUGUI m_TextPopup_TMPComponent;
         private const string k_LinkText = "You have selected link <#ffff00>";
         private const string k_WordText = "Word Index: <#ffff00>";
+
+        // The indices of the string the user has highlighted (by word, not char)
         private (int, int) selectedIndices = (-1, -1);
+
+        // Contains the amount the text box has scrolled at the last redraw
         private Dictionary<string, Vector2> offsets = new Dictionary<string, Vector2>();
 
+        // Contains the original position of each highlight
         private Dictionary<string, Vector3> origins = new Dictionary<string, Vector3>();
+
+        // Stores the color of each highlight
         private Dictionary<string, Color> colors = new Dictionary<string, Color>();
+
+        // Stores the frame name and frame element name of each highlight
         private Dictionary<string, (string, string)> fnames = new Dictionary<string, (string, string)>();
 
-
+        // The slot in which the highlighted text is displayed
         public TMP_Text Result;
+
+        // Start and end used for GameScript.cs to access
         public int startIndex = -1;
         public int endIndex = -1;
 
+        // The parent is the canvas, the position is the frame element 
+        // i.e. input field that the text exists under
         public GameObject parentGameObject;
         public GameObject positionGameObject;
 
-
+        // Variables used by original Text Selector B
         private TextMeshProUGUI m_TextMeshPro;
         private Canvas m_Canvas;
         private Camera m_Camera;
 
-        // Flags
-        private int m_selectedWord = -1;
     
 
         private Matrix4x4 m_matrix;
 
         private TMP_MeshInfo[] m_cachedMeshInfoVertexData;
 
+        // Helper variables used for selecting the text
+        private int m_selectedWord = -1;
         private int lastdeSelected = -1;
         private string lastString = "Not in sentence";
         private string story = "";
-
         private Canvas canvas;
+        
+        // Indices 
         private Dictionary<string, (int, int)> FrameIndices = new Dictionary<string, (int,int)>();
 
+        // The last scroll value of the text box
         Vector2 last_offset;
 
+        // The top of the text box (to cause the highlights to diappear)
         float top;
 
         void Awake()
         {
             m_TextMeshPro = gameObject.GetComponent<TextMeshProUGUI>();
+
+            // set scroll offset, top of text box
             last_offset = gameObject.GetComponent<RectTransform>().offsetMin;
             top = (gameObject.GetComponent<RectTransform>().rect.height/2);
 
@@ -104,12 +126,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             }
         }
 
-        public void SetString(string s)
-        {
-            story = s;
-        }
-
-
+        // Adds a new highlight to the dictionaries (supports multi-line comment)
         public void addHighlight(string f_name, string fe_name, Color color, int start_char, int end_char)
         {
             
@@ -144,7 +161,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             }
         }
 
-
+        // Helper function that draws individual rectangles
         public void createRectangle(int first, int last, string gname, Color c)
         {
             GameObject g = GameObject.Find(gname);
@@ -192,6 +209,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             origins[gname] = imageGameObject.transform.position;
         }
 
+        // Redraws a single highlight based on name
         public void updateRectangle(string gname)
         {
             int first = FrameIndices[gname].Item1;
@@ -240,6 +258,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             origins[gname] = imageGameObject.transform.position;
         }
 
+        // updates all highlights by using updateRectangle
         public void UpdateHighlights()
         {
             Vector2 offset = gameObject.GetComponent<RectTransform>().offsetMin;
@@ -254,6 +273,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             last_offset = offset;
         }
 
+        // Destroys the highlights
         public void destroyHighlights(string f_name, string fe_name)
         {
             List<string> to_remove = new List<string>();
@@ -277,7 +297,8 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
                 FrameIndices.Remove(remove);
             }
         }
-     
+
+        // Destroys all highlight game objects, resets dictionaries
         public void destroyAllHighlights()
         {
             foreach(string gname in FrameIndices.Keys)
@@ -294,10 +315,20 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             colors = new Dictionary<string, Color>();
             FrameIndices = new Dictionary<string, (int, int)>();
         }
+        // Called every frame, updates the highlights
         public void FixedUpdate()
         {
             UpdateHighlights();
         }
+
+        // Called by GameScript.cs, locks the text as it is for annotation
+        public void SetString(string s)
+        {
+            story = s;
+        }
+
+        // Called by GameScript.cs in annotation mode, adds words to selected
+        // range on hover
         public void CheckAndSelect()
         { 
 
@@ -306,24 +337,32 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             int start = selectedIndices.Item1;
             int end = selectedIndices.Item2;
 
+            
             if((lastString != (m_TextMeshPro.text)) || 
                 (wordIndex == -1 && Input.GetMouseButtonDown(1)))
             {
+                // Deselects everything if the user right clicks outside
                 ClearText();
             } else if((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) {
+                // Search for words to expand range on hover
                 WordSelect();
             } else if(wordIndex != -1 && (wordIndex == start || wordIndex == end) && (Input.GetMouseButtonDown(1)))
             {
+                // If the user right clicks above a word, deselect just that word
                 ClearTextH(wordIndex);
                 if(start == end) selectedIndices = (-1, -1);
                 else if(wordIndex == start) selectedIndices = (start+1, end);
                 else selectedIndices = (start, end-1);
                 lastdeSelected = wordIndex;
             }
+            // Used to check that the input hasn't changed
             lastString = m_TextMeshPro.text;
+
+            // Updates the selected text in the box as seen by user 
             UpdateResult();
         }
 
+        // Ensures that the user can reselect after deselecting
         public void OnPointerExit(PointerEventData eventData)
         {
             lastdeSelected = -1;
@@ -345,6 +384,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             }
         }
 
+        // Used to broaden the range of the selected words on user hover
         void WordSelect()
         {
                 #region Word Selection Handling
@@ -413,16 +453,20 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             #endregion
         }
 
-
+        // Updates the result text in the window by converting from the indices
+        // by word to string
         void UpdateResult()
         {
             int start = selectedIndices.Item1;
             int end = selectedIndices.Item2;
             string updated = "";
+
+            // get array of words in story
             string[] byWord = (story).Split(" ");
             TMP_WordInfo[] wInfo = m_TextMeshPro.textInfo.wordInfo;
             startIndex = 0;
             if(start != -1){
+                // Concatenate the selected words using the character count
                 for(int i = start; i <= end; i++)
                 {
                     updated += " ";
@@ -433,11 +477,13 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
                     }
                 }
 
+                // Set the start and the end for GameScript.cs to use
                 startIndex = wInfo[start].firstCharacterIndex;
                 endIndex = wInfo[end].lastCharacterIndex + 1;
                 updated = updated.Substring(1);
                     
             } else {
+                // if no text is selected, display this to user
                 startIndex = -1;
                 endIndex = -1;
                 updated = "Not in sentence";
@@ -447,6 +493,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             
         }
 
+        // Helper that restores the color of one word
         void ClearTextH(int m_selectedWord)
         {
                 if (m_TextPopup_RectTransform != null && m_selectedWord != -1)
@@ -482,6 +529,7 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
                 }
         }
 
+        // Uses ClearTextH to restore the colors of every word in the text box
         public void ClearText()
         {
             int start = selectedIndices.Item1;
@@ -490,11 +538,15 @@ public class CustomTextSelector : MonoBehaviour, IPointerExitHandler, IPointerCl
             {
                 ClearTextH(i);
             }
+            // Sets indices and text displayed to user
             selectedIndices = (-1, -1);
             startIndex = -1;
             Result.text = "Not in sentence";
         }
 
+        // (from Text Selector B) 
+        //reverts back to original style of text, used as reference in creating
+        // ClearTextH 
         void RestoreCachedVertexAttributes(int index)
         {
             if (index == -1 || index > m_TextMeshPro.textInfo.characterCount - 1) return;

@@ -2,6 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/*
+This file includes all of the classes used in sending/parsing data to the
+backend, along with structures that model frames, frame relations, and
+annotated sentences. These are heavily utilized by the C# scripts in the
+game, so although this is not attached to a GameObject DO NOT DELETE THIS
+FILE.
+*/
+
 #region Serializable classes
 [Serializable]
 public class PlayerInfo

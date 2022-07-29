@@ -22,8 +22,10 @@ public class GameScript : MonoBehaviour
         public delegate void OnReceivedCallback(string json);
     #endregion
     #region items in scene
-   
-    [SerializeField] private PhotonView photonView;
+    // Uncomment if using photon
+    // [SerializeField] private PhotonView photonView;
+
+    // See editor for equivalent objects
     [SerializeField] private TMP_Text PlayerText;
     [SerializeField] private Camera mainCamera;
     [SerializeField] private TMP_Text Result;
@@ -90,28 +92,47 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region helper variables
+
+    // Indices of frame user is looking at (info tab and editing tab are separate)
     private int currentFrame = 0;
     private int infoFrame = 0;
     private int currentFE = 0;
+
+    // How many frames or fes the user has annotated in this session
     private int completeFrame = 0;
     private int completeFE = 0;
+
+    // The game object that stores the information about this session
+    // (See StoredInfo.cs)
     private FGame game;
 
+    // Used to determine whether to display the annotating or info tab
     private bool isInfo = false;
 
+    // Stores the official colors of frame elements
     private Dictionary<string, Dictionary<string, Color>> FEColors;
 
+    // Stores whether or not an FE has been annotated
     private Dictionary<FE, bool> isComplete = new Dictionary<FE, bool>();
 
+    // The current sentence that the user has been annotating
     private AnnotatedSentence currentSentence;
     
+    // Object that stores information about the player
     private PlayerInfo playerObject;
 
+    // Helper variable for preventing simultaenous fade in/fade out
     private bool isFading = false;
 
+    // Helper variable for preventing users from navigating away
+    // while the frames load
     private bool hasStarted = false;
 
+    // used to enable CustomTextSelector.cs in annotating mode
     private bool isAnnotating = false;
+
+    // the unedited text after the user saves their story
+    // TODO: save story in backend
     string story;
 
     // highlighting
@@ -123,6 +144,9 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region example initializations
+
+    // Just an example of how an FGame (see StoredInfo.cs) can be initialized
+    // from scratch. Unused in final version but kept for reference.
     private FGame createTestGame()
     {
 
@@ -172,10 +196,14 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region actual initializations
+
+    // Query the backend to get the array of frames
     private void GetFrames()
     {
         StartCoroutine(GetRequest("https://frame-game-backend.herokuapp.com/lookup/!", CreateFrameArray));
     }
+
+    // Parses the array of frames from the backend
     private void CreateFrameArray(string jsonData)
     {
         FEColors = new Dictionary<string, Dictionary<string, Color>>();
@@ -309,6 +337,9 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region change display text
+
+    // Used to adjust the text after the user increments/decrements
+    // frames/frame elements in annotating mode
     void UpdateText()
     {
         if(!isAnnotating)
@@ -336,6 +367,8 @@ public class GameScript : MonoBehaviour
             feCount.text = "" + (currentFE+1) +"/"+ game.frames[currentFrame].FEs.Length;
             feSaved.text = "" + completeFE + " done";
 
+            // if the frame element is locked in, do not let user select
+            // different text, change color
             if(isComplete[fe])
             {
                 (int, int) indices = currentSentence.labels[fe.name];
@@ -386,6 +419,8 @@ public class GameScript : MonoBehaviour
         }
     }
 
+    // Used to display the frame information page when the user increments or
+    // decrements the info page
     void UpdateInfo()
     {
         if(game.frames.Length > 0)
@@ -486,6 +521,8 @@ public class GameScript : MonoBehaviour
 
     #region general gameplay
 
+    // Set the initial state of the game, ensures that each fe is initially
+    // incomplete
     private void PlayGame()
     {
         if(!isInfo)
@@ -507,6 +544,8 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region create user annotation
+
+    // Saves the FE, uses create label to create a label if it is valid
     public void onFESave()
     {
         if(!isComplete[game.frames[currentFrame].FEs[currentFE]])
@@ -530,6 +569,10 @@ public class GameScript : MonoBehaviour
                 foreach(string lu in game.frames[currentFrame].allLUs)
                 {
                     bool containedInLU = true;
+
+                    // All of the words in the word have to be contained in
+                    // the LU, however, all words in the LU do not have to
+                    // appear in the word
                     foreach(string word in noPunct.Split(" "))
                     {
                         if(!lu.Contains(word)) containedInLU = false;
@@ -552,7 +595,7 @@ public class GameScript : MonoBehaviour
                     }
                 }
 
-                // if not, issue an alert
+                // if not valid, issue an alert
                 if(!isComplete[game.frames[currentFrame].FEs[currentFE]])
                 {
                     ErrorText.text = "Not a valid target. Click info tab for more. ";
@@ -571,6 +614,9 @@ public class GameScript : MonoBehaviour
                 Result.text = annotation;
             }
         } else {
+            // If the user presses the save button again, it will erase
+            // highlights and revert the frame element to an incomplete
+            // state
             isComplete[game.frames[currentFrame].FEs[currentFE]] = false;
             if(completeFE <= 1)
             {
@@ -585,6 +631,10 @@ public class GameScript : MonoBehaviour
 
         UpdateText();
     }
+
+    // Sends the frame off to the backend after creating an AnnotationInfo
+    // object (Note that the user cannot access the frame after this function
+    // is called)
     public void onFrameSave()
     {
         if(game.frames.Length > 0 && completeFE == game.frames[currentFrame].FEs.Length)
@@ -638,81 +688,112 @@ public class GameScript : MonoBehaviour
             
     }
 
+    // Helper function that creates a label for an FE
     private void createLabel((int, int) label)
     {
         string name = game.frames[currentFrame].FEs[currentFE].name;
         Dictionary<string, Color> colors = FEColors[(game.frames[currentFrame]).name];
+
+        // If start < -1, then the FE does not exist in the sentence
         if(label.Item1 < 0)
         {
+            // Checks if it is the first element in the sentence
             if(currentSentence.Equals(default(AnnotatedSentence)))
             {
                 currentSentence = new AnnotatedSentence("");
             }
 
+            // adds to labels
             isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
             currentSentence.labels[name] = (-1, -1);
             completeFE++;
             
         } else {
+        // If the frame element is not null-instantiated, we need to detect
+        // the sentence in which this FE exists
+
         // Find the start and end of the sentence
+
+        // Find the last index before the start of the fe
         int[] potentialStart = new int[3]{story.LastIndexOf('.',label.Item1), 
                                 story.LastIndexOf('?', label.Item1), 
                                 story.LastIndexOf('!', label.Item1)};
 
         int start;
+
         if(story.Length > potentialStart.Max()+1 && story[potentialStart.Max()+1] == ' ')
         {
+            // If there is a space between punctuation and start of sentence
             start = potentialStart.Max()+2;
         } else if(potentialStart.Max() < 0)
         {
+            // If there is no punctuation before the index
             start = 0;
         } else {
+            // If there is no space between punctuation and start of sentence
             start = potentialStart.Max()+1;
         }
 
-
+        // Find the first index before the end of the fe
         int[] potentialEnd = new int[3]{story.IndexOf('.',label.Item2), 
                                 story.IndexOf('?', label.Item2), 
                                 story.IndexOf('!', label.Item2)};
 
+        // Since we're using .Min, we need to remove -1 (not found) values
         int[] filtered = potentialEnd.Where(e => e >= 0).ToArray();
 
         int end;
         
         if(filtered.Length == 0)
         {
+            // No puncuation found after
             end = story.Length;
         } else {
+            // The end of the sentence
             end = filtered.Min()+1;
         }
 
+        // The sentence
         string sent = story.Substring(start, end-start);
+
+        // If there have been no other (non-null instantiated) FEs
         if(currentSentence.Equals(default(AnnotatedSentence)) || currentSentence.text == "")
         {
+            // Add a highlight
             if(name != "Target")
             {
                 customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
             }
+            // if the current sentence if uninitialized
             if(currentSentence.Equals(default(AnnotatedSentence))) currentSentence = new AnnotatedSentence(sent);
+            // set the sentence text to the sentence that contains this fe
             currentSentence.text = sent;
+
+            // Complete current label
             currentSentence.labels[name] = (label.Item1-start, label.Item2-label.Item1);
             isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
+            
+            // Clears the text
             customText.ClearText();
             completeFE++;
             
         } else
         {
+            // The current sentence matches the sentence of this fe
             if(currentSentence.text == sent)
             {
                 if(name != "Target")
                 {
                     customText.addHighlight(game.frames[currentFrame].name, name, colors[name], customText.startIndex, customText.endIndex);
                 }
+
+                // (see above), adds label and clears text
                 currentSentence.labels[name] = (label.Item1-start, label.Item2-label.Item1);
                 isComplete[game.frames[currentFrame].FEs[currentFE]] = true;
                 customText.ClearText();
                 completeFE++;
             } else {
+                // show error, fes must be in same frame
                 ErrorText.text = "Frame elements must be in the same sentence. Click info tab for more.";
                 if(!isFading)
                 {
@@ -731,6 +812,8 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region info screen
+
+    // Enable the info screen
     public void onInfoClick()
     {
         customText.ClearText();
@@ -743,6 +826,8 @@ public class GameScript : MonoBehaviour
         UpdateInfo();
     }
 
+    // Enable the story writing screen 
+    //(not to be confused with the starting screen scene)
     public void onHomeClick()
     {
         FrameDesc.SetActive(true);
@@ -756,7 +841,7 @@ public class GameScript : MonoBehaviour
 
     #endregion
 
-    #region get and post requests
+    #region get and post requests helpers
     IEnumerator GetRequest(string uri, OnReceivedCallback callback)
         {
             using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
@@ -803,6 +888,7 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region writing to annotating
+    // Called when the user decides to "lock in" their story for annotating
     public void onStoryFinish()
     {
         isAnnotating = true;
@@ -824,6 +910,7 @@ public class GameScript : MonoBehaviour
 
     #region increment/decrement frames/FEs
 
+    // Increments (with looping), called by arrow button objects
     public void onLeftFIClick()
     {
         if(infoFrame == 0) infoFrame = game.frames.Length-1;
@@ -888,6 +975,8 @@ public class GameScript : MonoBehaviour
     #endregion
 
     #region text fade in/out
+    
+    // These are general functions that cause a game object or text to fade out
     private void StartTextFadeOut(GameObject g_obj, TMP_Text obj)
     {
         IEnumerator coroutine = TextFadeOut(g_obj, obj);

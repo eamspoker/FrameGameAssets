@@ -19,9 +19,16 @@ public class ExampleController : MonoBehaviour
     #endregion
 
     #region helper variables
+
+    // variables that deal with parsing frame data
     private int currIndex = 0;
     private SentenceList sentenceList;
 
+    // For highlighting colors
+    private Dictionary<int,Dictionary<string, Color>> colors = new Dictionary<int, Dictionary<string, Color>>();
+
+
+    // Items within the scene, assigned within the editor
     public TMP_InputField displayExamples;
     public TMP_Text displayTextBox;
 
@@ -29,17 +36,19 @@ public class ExampleController : MonoBehaviour
     public TMP_Text FrameName;
     public GameObject leftArrow;
     public GameObject rightArrow;
-
-    private Dictionary<int,Dictionary<string, Color>> colors = new Dictionary<int, Dictionary<string, Color>>();
-
-    public PlayerInfo playerObject;
-    public TMP_Text PlayerText;
-    private CustomTextSelector customText;
-    private bool hasStarted;
-
     public GameObject Error;
     public TMP_Text ErrorText;
+    public TMP_Text PlayerText;
 
+    // Player statistics/username as queried from backend
+    public PlayerInfo playerObject;
+    // The CustomTextSelector script used for highlighting
+    private CustomTextSelector customText;
+
+    // Stops the user from navigating away before they agree to conditions
+    private bool hasStarted;
+
+    // Helper variable for preventing simultaenous fade in/fade out
     private bool isFading = false;
 
     #endregion
@@ -63,7 +72,7 @@ public class ExampleController : MonoBehaviour
         
     }
 
-    // Update is called once per frame
+    // Load the editing scene
     public void onEditModeEnable()
     {
         if(hasStarted)
@@ -81,6 +90,8 @@ public class ExampleController : MonoBehaviour
         }
     }
 
+
+    // Load the viewing others' sentences scene
     public void onStartEnable()
     {
         if(hasStarted)
@@ -102,6 +113,7 @@ public class ExampleController : MonoBehaviour
 
     #region callbacks
 
+    // Callback that uses the user's name after querying the backend
     private void UpdatePlayerInfo(string jsonData)
     {
         object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
@@ -110,6 +122,7 @@ public class ExampleController : MonoBehaviour
         StartCoroutine(GetRequest("https://frame-game-backend.herokuapp.com/getSentences", RetrieveSentences));
     }
 
+    // Callback that parses the previously annotated sentences
     private void RetrieveSentences(string jsonData)
     {
         object resultValue = JsonUtility.FromJson<SentenceList>(jsonData);
@@ -128,6 +141,7 @@ public class ExampleController : MonoBehaviour
 
     #region increment/decrement examples
 
+    // Displays the current sentence, author, and frame, and highlights words
     void UpdateExamples()
     {
         SentenceInfo sentence = sentenceList.list[currIndex];
@@ -181,6 +195,7 @@ public class ExampleController : MonoBehaviour
 
     }
 
+    // Called when the left arrow is called, moves to the previous sentence (loops)
     public void onLeftPress()
     {
         if(currIndex == 0)  currIndex = sentenceList.list.Length-1;
@@ -189,6 +204,7 @@ public class ExampleController : MonoBehaviour
         UpdateExamples();
     }
 
+    // Called when the right arrow is called, moves to the previous sentence (loops)
     public void onRightPress()
     {
         if(currIndex == sentenceList.list.Length-1)  currIndex = 0;
@@ -199,6 +215,9 @@ public class ExampleController : MonoBehaviour
     #endregion
 
     #region get and post requests
+
+    // Generic get request helper function that queries backend and 
+    // calls a callback function on the returned data
     IEnumerator GetRequest(string uri, OnReceivedCallback callback)
         {
             using (UnityWebRequest webRequest = UnityWebRequest.Get(uri))
@@ -218,6 +237,7 @@ public class ExampleController : MonoBehaviour
             
         }
 
+    // Generic post request helper function that sends json string to backend
     IEnumerator PostRequest(string url, string json)
         {
             
@@ -244,6 +264,7 @@ public class ExampleController : MonoBehaviour
 
     #endregion
 
+    // These are general functions that cause a game object or text to fade out
     #region text fade in/out
     private void StartTextFadeOut(GameObject g_obj, TMP_Text obj)
     {

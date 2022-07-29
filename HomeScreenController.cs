@@ -18,12 +18,14 @@ public class HomeScreenController : MonoBehaviour
     #endregion
 
     #region helper variables
+    private bool hasStarted;
+    private bool isFading = false;
+    #endregion
 
+    #region items in scene
     public PlayerInfo playerObject;
     public TMP_Text PlayerText;
     public TMP_Text WelcomeText;
-    private bool hasStarted;
-
     public GameObject Error;
     public TMP_Text ErrorText;
 
@@ -31,7 +33,7 @@ public class HomeScreenController : MonoBehaviour
 
     public TMP_InputField infoText;
 
-    private bool isFading = false;
+    
 
     public GameObject Copyright;
 
@@ -50,6 +52,8 @@ public class HomeScreenController : MonoBehaviour
     #endregion
     
     #region basic functions
+
+    // Get player information from backend
     void Awake()
     {
         string PID = PlayerPrefs.GetString("player_id");
@@ -71,8 +75,9 @@ public class HomeScreenController : MonoBehaviour
 
     #endregion
 
-    #region callbacks
+    #region callbacks]
 
+    // Parse the user's information, if the user is new, activate walkthrough
     private void UpdatePlayerInfo(string jsonData)
     {
         object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
@@ -98,6 +103,7 @@ public class HomeScreenController : MonoBehaviour
     #endregion
 
     #region begin other scenes
+    // Loads the game
     public void onEditModeEnable()
     {
         if(hasStarted)
@@ -115,6 +121,7 @@ public class HomeScreenController : MonoBehaviour
         }
     }
 
+    // Loads the view of other people's sentences
     public void onViewerModeEnable()
     {
         if(hasStarted)
@@ -134,6 +141,8 @@ public class HomeScreenController : MonoBehaviour
     #endregion
 
     #region returning player
+
+    // Show the information about FrameNet
     public void onDescPress()
     {
         infoText.text = "In addition to providing you with an fun way to write stories and think carefully about what you have written, this game is intended to collect data to expand <u><b><link=\"ID\">the FrameNet</link> project</b></u>. \n\nThe <u><b><link=\"ID\">FrameNet</link></b></u> project is building a database of English that is both human- and machine-readable, based on annotating examples of how words are actually used. For students, it can serve as a dictionary, with more than 13,000 word senses.  Most of them have annotated examples that show the meaning and use of the word. For Natural Language Processing developers, the 200,000+ manually annotated sentences  provide a training dataset for semantic role labeling.  FrameNet has been used in applications like information extraction, machine translation, event recognition, and sentiment analysis. \n\nFrameNet is based on the theory that various words can make us think of the same type of situation, which is called a semantic frame. For example, admire, appreciate, disapprove, and scorn are all in the Judgment frame, even though some are positive and some are negative, because all of them involve a person who makes a judgment about someone (or something) else.  FrameNet gives these roles formal names; in the Judgment frame they are called Cognizer (for the person who judges) and Evaluee (for the person or thing that is judged.";
@@ -142,6 +151,7 @@ public class HomeScreenController : MonoBehaviour
          scrollbar.SetActive(true);
     }
 
+    // Show the gameplay instructions
     public void onInstrPress()
     {
          infoText.text = "Instructions:\n- Click on the coffee cup to get started \n- Write your story based on the frames given to you (read the \"Info\" tab for details)\n- Click the \"Finish\" story button to finish the story\n- Press the shift key and hover to select words \n- Lock in frame elements and save your annotated sentences";
@@ -153,12 +163,14 @@ public class HomeScreenController : MonoBehaviour
 
     #region walkthrough tutorial
 
+    // Takes them to the copyright information
     public void onExamplePress()
     {
         MoreInfo.SetActive(false);
         loadCopyright();
     }
 
+    // If they decide to see more information, show them information about framenet
     public void onMoreInfoPress()
     {
 
@@ -168,6 +180,7 @@ public class HomeScreenController : MonoBehaviour
         StartingScreen.SetActive(false);
     }
 
+    // Show copyright information
     public void loadCopyright()
     {
         scrollbar.SetActive(false);
@@ -177,6 +190,7 @@ public class HomeScreenController : MonoBehaviour
         
     }
 
+    // If they agree to terms and conditions, load returning player mode
     public void onSignCopyright()
     {
         AgreementInfo inf = new AgreementInfo();
@@ -194,17 +208,10 @@ public class HomeScreenController : MonoBehaviour
         hasStarted = true;
     }
 
-    public void getStarted()
-    {
-        AgreementInfo inf = new AgreementInfo();
-        inf.id = playerObject.id;
-        inf.time = DateTime.Now.ToString();
-        string json = JsonUtility.ToJson(inf);
-        StartCoroutine(PostRequest("https://frame-game-backend.herokuapp.com/players/agreement", json));
-        Copyright.SetActive(false);
-    }
     
     #endregion
+
+    // See MenuScript.cs for further description on these generic helpers
 
     #region get and post requests
     IEnumerator GetRequest(string uri, OnReceivedCallback callback)

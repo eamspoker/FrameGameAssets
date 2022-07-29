@@ -12,6 +12,11 @@ using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 
 namespace ICSI.FrameNet.FrameGame {
+
+// This script governs the first scene of the game (i.e. the "welcome screen")
+// It faciliates the Facebook login and sends the users' information to the backend.
+// Originally, it used Photon for multiplayer, this aspect has been commented out
+// but can be uncommented for use if needed.
 public class MenuScript : MonoBehaviour // PunCallbacks
 {
 
@@ -27,7 +32,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
     [SerializeField] private GameObject LoginButton;
 
 
-    // Start is called before the first frame update
+    // triggered when the login button is pressed, if it is not in testing mode, it will start the logic process
     public void Login()
     {
         LoginButton.SetActive(false);
@@ -58,6 +63,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
     {
     }
 
+    // helper function that gets and parses the PlayerInfo json 
     IEnumerator GetRequest(string uri)
     {
         string json = "";
@@ -74,6 +80,8 @@ public class MenuScript : MonoBehaviour // PunCallbacks
                     //Convert to Object
                     object resultValue = JsonUtility.FromJson<PlayerInfo>(jsonData);
                     PlayerInfo inf = (PlayerInfo)Convert.ChangeType(resultValue, typeof(PlayerInfo));
+                    
+                    // set the username to the username found by Facebook's authentication process
                     if(inf.id == "")
                     {
                         inf.id = id;
@@ -92,11 +100,12 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             }
         }
 
-        // Debug.Log(json);
+        // we then send back the player's information
         StartCoroutine(PostRequest("https://frame-game-backend.herokuapp.com/players/update", json));
          
     }
 
+    // helper function that posts data in json form to the backend
     IEnumerator PostRequest(string url, string json)
     {
         
@@ -131,6 +140,8 @@ public class MenuScript : MonoBehaviour // PunCallbacks
     {
         
     }
+
+    // Loads the StartScreen scene
     public void ConnectSRL() 
     {
         
@@ -144,7 +155,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
     }
 
 
-    // Callbacks: these are called after a certain event
+    // Photon Callbacks: these are called after a certain event in Photon
 
     // public override void OnConnectedToMaster()
     // {
@@ -169,6 +180,7 @@ public class MenuScript : MonoBehaviour // PunCallbacks
 
     // Callbacks and helpers for Facebook login
 
+    // Callback after SDK is initialized
     private void InitCallback()
     {
         if (FB.IsInitialized)
@@ -182,6 +194,8 @@ public class MenuScript : MonoBehaviour // PunCallbacks
         }
     }
 
+    // Keeping the timescale the same when Facebook navigates off the page
+    // (less relevant for our purposes, but kept for safety)
     private void OnHideUnity (bool isGameShown)
     {
         if (!isGameShown) {
@@ -192,6 +206,8 @@ public class MenuScript : MonoBehaviour // PunCallbacks
             Time.timeScale = 1;
         }
     }
+
+    // Logged in
     private void FacebookLogin()
     {
         if (FB.IsLoggedIn)
