@@ -32,15 +32,13 @@ The Frame Game is an in-progress crowdsourcing game that seeks to provide users 
     <td>SRLGame (see blue on flowchart)</td>
     <td>Actual gameplay of the game, gathers frames from the backend, allows users to annotate their own work</td>
   </tr>
-  <tr>
-    
     <tr>
     <td>ExampleController.cs</td>
     <td>C# Script</td>
     <td>n/a</td>
     <td>Allows users to see others' annotated sentences</td>
   </tr>
-        <tr>
+   <tr>
     <td>TextMeshPro/Examples & Extras/Scripts/CustomTextSelector.cs</td>
     <td>C# Script</td>
     <td>n/a</td>
