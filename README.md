@@ -40,7 +40,6 @@ The Frame Game is an in-progress crowdsourcing game that seeks to provide users 
     <td>n/a</td>
     <td>Allows users to see others' annotated sentences</td>
   </tr>
-  <tr>
         <tr>
     <td>TextMeshPro/Examples & Extras/Scripts/CustomTextSelector.cs</td>
     <td>C# Script</td>
